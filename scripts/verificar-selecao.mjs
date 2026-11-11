@@ -1,5 +1,5 @@
 import puppeteer from 'puppeteer-core';
-import {mkdirSync} from 'node:fs';
+import {mkdirSync,writeFileSync} from 'node:fs';
 
 const BASE='http://127.0.0.1:4173/Tabletop-RPG/';
 const results=[];const errors=[];let failures=0;
@@ -112,5 +112,6 @@ try{
 }
 console.log('\n=== RELATÓRIO DA SELEÇÃO MÚLTIPLA ===');
 for(const line of results)console.log(line);
+writeFileSync('capturas/relatorio.txt',results.join('\n')+`\n\n${failures?`${failures} FALHA(S)`:'TUDO OK'}\n`);
 console.log(`=== ${failures?`${failures} FALHA(S)`:'TUDO OK'} ===`);
 process.exit(failures?1:0);
