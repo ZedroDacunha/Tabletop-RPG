@@ -36,6 +36,7 @@ O build publicado leva de 1 a 2 minutos para aparecer no ar. O GitHub Pages prec
 - Câmera orbital, deslocamento, zoom, vista superior e foco no objeto.
 - Biblioteca de 32 peças: árvores (pinheiro, carvalho, bétula, árvore seca), vegetação rasteira, rochas, lagoa, cristais, ruínas (muralha, arco, torre, coluna, escadaria, santuário), estruturas (poço, cerca, ponte), acampamento (tenda, fogueira, lanterna, estandarte, caixote, barril, carrinho, baú), decoração (estátua, piso de pedra) e formas básicas.
 - Inserir, selecionar, mover, rotacionar, escalar, duplicar, ocultar, travar e remover objetos.
+- **Cenários prontos** (aba Cenários): clareira, acampamento, ruína, santuário e lagoa entram no mapa com um clique, num ponto livre perto do centro, e podem ser desfeitos com Ctrl+Z.
 - Grade, encaixe, tamanho do mapa, cor de fundo e quatro atmosferas (amanhecer, dia, entardecer e noite).
 - Ambientação com céu em gradiente, sol/lua, estrelas à noite, colinas no horizonte, névoa por distância, chão com textura procedural e vinheta sobre o viewport.
 - Desfazer/refazer até 40 operações.
