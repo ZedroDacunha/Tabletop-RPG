@@ -45,18 +45,20 @@ const AMBIENCE:Record<AtmosphereKey,Ambience>={
  night:{skyTop:'#0b131c',skyHorizon:'#1d2a33',glow:'#31536b',sunColor:'#b9ccf5',sunDisc:'#dce7ff',sunIntensity:.85,sunPosition:[-18,23,-10],ambient:.36,hemiSky:'#5d7a9f',hemiGround:'#2f362b',hemi:.42,ground:'#3a4a3d',groundDeep:'#232c26',grid:'#6f8570',gridSection:'#819a82',fog:[48,135],exposure:1,stars:1},
 };
 function mixColors(base:string,tint:string,amount:number){return '#'+new THREE.Color(base).lerp(new THREE.Color(tint),amount).getHexString()}
-function SkyDome({top,horizon,glow,radius=210}:{top:string;horizon:string;glow:string;radius?:number}){
+function SkyDome({top,horizon,glow,deep,radius=210}:{top:string;horizon:string;glow:string;deep:string;radius?:number}){
  const geometry=useMemo(()=>{
   const g=new THREE.SphereGeometry(radius,32,20);const position=g.attributes.position;const colors=new Float32Array(position.count*3);
-  const cTop=new THREE.Color(top),cHorizon=new THREE.Color(horizon),cGlow=new THREE.Color(glow),tmp=new THREE.Color();
+  const cTop=new THREE.Color(top),cHorizon=new THREE.Color(horizon),cGlow=new THREE.Color(glow),cDeep=new THREE.Color(deep),tmp=new THREE.Color();
   for(let i=0;i<position.count;i++){
-   const y=Math.max(0,position.getY(i)/radius);const k=Math.pow(y,.6);
-   tmp.copy(cHorizon).lerp(cTop,k).lerp(cGlow,Math.pow(1-y,7)*.55);
+   const y=position.getY(i)/radius;const h=Math.max(0,y);
+   tmp.copy(cHorizon).lerp(cTop,Math.pow(h,.55)).lerp(cGlow,Math.pow(1-h,10)*.32);
+   const below=Math.min(1,Math.max(0,(.04-y)/.55));
+   tmp.lerp(cDeep,below*below*.94);
    colors[i*3]=tmp.r;colors[i*3+1]=tmp.g;colors[i*3+2]=tmp.b;
   }
   g.setAttribute('color',new THREE.BufferAttribute(colors,3));
   return g;
- },[top,horizon,glow,radius]);
+ },[top,horizon,glow,deep,radius]);
  return <mesh geometry={geometry} renderOrder={-2}><meshBasicMaterial vertexColors side={THREE.BackSide} fog={false} toneMapped={false} depthWrite={false}/></mesh>;
 }
 function CelestialBody({direction,color,size=9}:{direction:[number,number,number];color:string;size?:number}){
@@ -96,12 +98,12 @@ function World(props:Props){
  const ambience=AMBIENCE[s.atmosphere]??AMBIENCE.day;
  const {gl,invalidate}=useThree();
  useEffect(()=>{gl.toneMappingExposure=ambience.exposure;invalidate()},[ambience,gl,invalidate]);
- const sky=useMemo(()=>({top:mixColors(ambience.skyTop,s.background,.18),horizon:mixColors(ambience.skyHorizon,s.background,.42),glow:mixColors(ambience.glow,s.background,.15)}),[ambience,s.background]);
+ const sky=useMemo(()=>({top:mixColors(ambience.skyTop,s.background,.18),horizon:mixColors(ambience.skyHorizon,s.background,.42),glow:mixColors(ambience.glow,s.background,.12),deep:mixColors(s.background,'#050a08',.45)}),[ambience,s.background]);
  const groundTexture=useGroundTexture(ambience.ground,Math.max(6,Math.round(s.size/3)));
  function floorPoint(e:ThreeEvent<PointerEvent|MouseEvent>):Vec3{let x=e.point.x,z=e.point.z;if(s.snap){x=Math.round(x/s.gridSize)*s.gridSize;z=Math.round(z/s.gridSize)*s.gridSize;}const limit=s.size/2;return [Math.max(-limit,Math.min(limit,x)),0,Math.max(-limit,Math.min(limit,z))];}
  return <>
  <color attach="background" args={[s.background]}/><fog attach="fog" args={[s.background,ambience.fog[0],ambience.fog[1]]}/>
- <SkyDome top={sky.top} horizon={sky.horizon} glow={sky.glow}/>
+ <SkyDome top={sky.top} horizon={sky.horizon} glow={sky.glow} deep={sky.deep}/>
  <CelestialBody direction={ambience.sunPosition} color={ambience.sunDisc}/>
  {ambience.stars>0&&<Stars count={ambience.stars}/>}
  <ambientLight intensity={ambience.ambient}/><hemisphereLight args={[ambience.hemiSky,ambience.hemiGround,ambience.hemi]}/>

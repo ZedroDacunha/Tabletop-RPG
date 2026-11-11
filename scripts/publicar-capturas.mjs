@@ -3,7 +3,10 @@ import { execFileSync } from 'node:child_process';
 
 const run = process.env.GITHUB_RUN_ID || 'local';
 const files = readdirSync('out').filter((f) => f.endsWith('.jpg')).sort();
-const report = readFileSync('out/relatorio.txt', 'utf8');
+const report = readdirSync('out')
+  .filter((f) => f.startsWith('relatorio'))
+  .map((f) => readFileSync(`out/${f}`, 'utf8'))
+  .join('\n');
 const SIZE = 42000;
 
 function gh(args, body) {

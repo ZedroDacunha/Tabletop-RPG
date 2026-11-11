@@ -28,28 +28,31 @@ jobs:
       - name: Instalar Puppeteer
         run: npm i --no-save puppeteer-core@23
 
-      - name: Preparar Chrome e servidor
+      - name: Subir servidores
         run: |
           mkdir -p out /tmp/serve
           ln -sfn "$PWD/dist" /tmp/serve/Tabletop-RPG
-          python3 -m http.server 8000 --directory /tmp/serve &
-          sleep 2
-          curl -s -o /dev/null -w 'servidor local: %{http_code}\n' http://127.0.0.1:8000/Tabletop-RPG/
+          python3 -m http.server 8000 --directory /tmp/serve > /tmp/serve.log 2>&1 &
+          VITE_BASE=/ npx vite --host 127.0.0.1 --port 5173 --strictPort > /tmp/vite.log 2>&1 &
+          sleep 6
+          curl -s -o /dev/null -w 'build: %{http_code}\n' http://127.0.0.1:8000/Tabletop-RPG/
+          curl -s -o /dev/null -w 'galeria: %{http_code}\n' http://127.0.0.1:5173/galeria.html
 
       - name: Capturar telas
         run: |
           export CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)"
           export SITE_URL="http://127.0.0.1:8000/Tabletop-RPG/"
+          export GALLERY_URL="http://127.0.0.1:5173/galeria.html"
           echo "chrome: $CHROME_PATH"
           node scripts/verificar.mjs
-          cat out/relatorio.txt
+          cat out/relatorio-site.txt
 
       - name: Publicar capturas em issue
         if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [ -f out/relatorio.txt ]; then node scripts/publicar-capturas.mjs; fi
+          if ls out/*.jpg >/dev/null 2>&1; then node scripts/publicar-capturas.mjs; fi
 
       - name: Guardar resultados
         if: always()
