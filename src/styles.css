@@ -34,3 +34,9 @@
 .ruler-readout{display:flex;align-items:center;gap:7px;width:max-content;margin-bottom:8px;padding:5px 12px;border:1px solid #6e8857;border-radius:20px;background:rgba(38,52,38,.88);color:#d7edb8;font-size:9px;letter-spacing:.2px;backdrop-filter:blur(6px)}
 .ruler-readout strong{font-size:10px;font-weight:600}
 .ruler-readout span{color:#9cb490}
+
+/* Camadas */
+.layer-list{display:flex;flex-direction:column;gap:3px;margin:8px 0 6px}
+.layer-row{display:flex;align-items:center;gap:2px;padding:1px 3px 1px 9px;border:1px solid #3a4c33;border-radius:5px;color:#a4ba96}
+.layer-name{flex:1;display:flex;align-items:center;gap:7px;font-size:10px}
+.layer-name small{font-size:8px;color:#8ea582;background:#2a3a25;border-radius:8px;padding:1px 6px}
