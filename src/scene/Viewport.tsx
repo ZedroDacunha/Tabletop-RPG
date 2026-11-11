@@ -39,9 +39,9 @@ function Placed({entity,project,selected,tool,onSelect,onTransform,onError}:Omit
 type AtmosphereKey='dawn'|'day'|'dusk'|'night';
 type Ambience={skyTop:string;skyHorizon:string;glow:string;sunColor:string;sunDisc:string;sunIntensity:number;sunPosition:[number,number,number];ambient:number;hemiSky:string;hemiGround:string;hemi:number;ground:string;groundDeep:string;grid:string;gridSection:string;fog:[number,number];exposure:number;stars:number};
 const AMBIENCE:Record<AtmosphereKey,Ambience>={
- dawn:{skyTop:'#63799f',skyHorizon:'#f6cba6',glow:'#ffd9b8',sunColor:'#ffcfaa',sunDisc:'#fff0d8',sunIntensity:2.2,sunPosition:[-24,7,18],ambient:.62,hemiSky:'#cbd8ea',hemiGround:'#5b584a',hemi:.78,ground:'#6d7c60',groundDeep:'#3a473c',grid:'#9db48c',gridSection:'#b4c7a0',fog:[62,160],exposure:1.02,stars:45},
- day:{skyTop:'#7ea7cd',skyHorizon:'#e2ebde',glow:'#fdf7e4',sunColor:'#fff2d6',sunDisc:'#fffaf0',sunIntensity:2.55,sunPosition:[-16,27,13],ambient:.82,hemiSky:'#d9e6dd',hemiGround:'#4f5844',hemi:1.05,ground:'#77865f',groundDeep:'#48573f',grid:'#9db48c',gridSection:'#b1c79c',fog:[78,185],exposure:1.06,stars:0},
- dusk:{skyTop:'#3f4f6d',skyHorizon:'#e89a6b',glow:'#ffc08a',sunColor:'#ffb377',sunDisc:'#ffe0b8',sunIntensity:2,sunPosition:[-26,10,15],ambient:.7,hemiSky:'#b6c2d8',hemiGround:'#4a4a3b',hemi:.82,ground:'#69785c',groundDeep:'#39443b',grid:'#93a982',gridSection:'#a8bd94',fog:[66,158],exposure:1.03,stars:35},
+ dawn:{skyTop:'#6a7fa8',skyHorizon:'#f3c3a1',glow:'#ffd9b8',sunColor:'#ffcfaa',sunDisc:'#fff0d8',sunIntensity:2.2,sunPosition:[-24,7,18],ambient:.62,hemiSky:'#cbd8ea',hemiGround:'#5b584a',hemi:.78,ground:'#6d7c60',groundDeep:'#3a473c',grid:'#9db48c',gridSection:'#b4c7a0',fog:[62,160],exposure:1.02,stars:45},
+ day:{skyTop:'#6a9cc9',skyHorizon:'#d3e0e6',glow:'#fdf7e4',sunColor:'#fff2d6',sunDisc:'#fffaf0',sunIntensity:2.55,sunPosition:[-16,27,13],ambient:.82,hemiSky:'#d9e6dd',hemiGround:'#4f5844',hemi:1.05,ground:'#77865f',groundDeep:'#48573f',grid:'#9db48c',gridSection:'#b1c79c',fog:[78,185],exposure:1.06,stars:0},
+ dusk:{skyTop:'#3a4a68',skyHorizon:'#e08e5f',glow:'#ffc08a',sunColor:'#ffb377',sunDisc:'#ffe0b8',sunIntensity:2,sunPosition:[-26,10,15],ambient:.7,hemiSky:'#b6c2d8',hemiGround:'#4a4a3b',hemi:.82,ground:'#69785c',groundDeep:'#39443b',grid:'#93a982',gridSection:'#a8bd94',fog:[66,158],exposure:1.03,stars:35},
  night:{skyTop:'#0b131c',skyHorizon:'#1d2a33',glow:'#31536b',sunColor:'#b9ccf5',sunDisc:'#dce7ff',sunIntensity:.85,sunPosition:[-18,23,-10],ambient:.36,hemiSky:'#5d7a9f',hemiGround:'#2f362b',hemi:.42,ground:'#3a4a3d',groundDeep:'#232c26',grid:'#6f8570',gridSection:'#819a82',fog:[48,135],exposure:1,stars:1},
 };
 function mixColors(base:string,tint:string,amount:number){return '#'+new THREE.Color(base).lerp(new THREE.Color(tint),amount).getHexString()}
@@ -93,12 +93,23 @@ function useGroundTexture(color:string,repeat:number){
   return texture;
  },[color,repeat]);
 }
+function HorizonRing({size,color}:{size:number;color:string}){
+ const hills=useMemo(()=>{
+  let seed=4327;const rand=()=>{seed=(seed*16807)%2147483647;return seed/2147483647};
+  return Array.from({length:28},(_,i)=>{
+   const angle=(i/28)*Math.PI*2+rand()*.16;
+   const distance=size*(.78+rand()*.62);
+   return {x:Math.cos(angle)*distance,z:Math.sin(angle)*distance,h:size*(.05+rand()*.12),w:size*(.11+rand()*.09),rot:rand()*Math.PI};
+  });
+ },[size]);
+ return <group>{hills.map((hill,index)=><mesh key={index} position={[hill.x,-.3,hill.z]} rotation={[0,hill.rot,0]}><coneGeometry args={[hill.w,hill.h,5,1]}/><meshStandardMaterial color={color} roughness={1} flatShading/></mesh>)}</group>;
+}
 function World(props:Props){
  const {project,selected,placement}=props;const [point,setPoint]=useState<Vec3>([0,0,0]);const [hover,setHover]=useState(false);const s=project.settings;
  const ambience=AMBIENCE[s.atmosphere]??AMBIENCE.day;
  const {gl,invalidate}=useThree();
  useEffect(()=>{gl.toneMappingExposure=ambience.exposure;invalidate()},[ambience,gl,invalidate]);
- const sky=useMemo(()=>({top:mixColors(ambience.skyTop,s.background,.18),horizon:mixColors(ambience.skyHorizon,s.background,.42),glow:mixColors(ambience.glow,s.background,.12),deep:mixColors(s.background,'#050a08',.45)}),[ambience,s.background]);
+ const sky=useMemo(()=>({top:mixColors(ambience.skyTop,s.background,.1),horizon:mixColors(ambience.skyHorizon,s.background,.26),glow:mixColors(ambience.glow,s.background,.1),deep:mixColors(s.background,'#050a08',.45)}),[ambience,s.background]);
  const groundTexture=useGroundTexture(ambience.ground,Math.max(6,Math.round(s.size/3)));
  function floorPoint(e:ThreeEvent<PointerEvent|MouseEvent>):Vec3{let x=e.point.x,z=e.point.z;if(s.snap){x=Math.round(x/s.gridSize)*s.gridSize;z=Math.round(z/s.gridSize)*s.gridSize;}const limit=s.size/2;return [Math.max(-limit,Math.min(limit,x)),0,Math.max(-limit,Math.min(limit,z))];}
  return <>
@@ -108,6 +119,7 @@ function World(props:Props){
  {ambience.stars>0&&<Stars count={ambience.stars}/>}
  <ambientLight intensity={ambience.ambient}/><hemisphereLight args={[ambience.hemiSky,ambience.hemiGround,ambience.hemi]}/>
  <directionalLight position={ambience.sunPosition} color={ambience.sunColor} intensity={ambience.sunIntensity} castShadow shadow-mapSize={[2048,2048]} shadow-camera-left={-s.size*.62} shadow-camera-right={s.size*.62} shadow-camera-top={s.size*.62} shadow-camera-bottom={-s.size*.62} shadow-camera-far={140} shadow-normalBias={.035} shadow-bias={-.0001}/>
+ <HorizonRing size={s.size} color={mixColors(ambience.groundDeep,s.background,.45)}/>
  <mesh receiveShadow position={[0,-.26,0]}><boxGeometry args={[s.size,.5,s.size]}/><meshStandardMaterial color={ambience.groundDeep} roughness={1}/></mesh>
  <mesh receiveShadow rotation={[-Math.PI/2,0,0]} position={[0,.002,0]} onPointerMove={e=>{if(placement){setPoint(floorPoint(e));setHover(true)}}} onPointerOut={()=>setHover(false)} onClick={e=>{e.stopPropagation();if(e.delta<5){if(placement)props.onPlace(floorPoint(e));else props.onSelect(null)}}}><planeGeometry args={[s.size,s.size]}/><meshStandardMaterial map={groundTexture??undefined} roughness={1}/></mesh>
  {s.grid&&<Grid args={[s.size,s.size]} position={[0,.01,0]} cellSize={s.gridSize} cellThickness={.5} cellColor={ambience.grid} sectionSize={s.gridSize*5} sectionThickness={1} sectionColor={ambience.gridSection} fadeDistance={100} fadeStrength={1} followCamera={false} infiniteGrid={false}/>}
