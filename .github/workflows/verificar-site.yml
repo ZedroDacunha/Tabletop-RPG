@@ -1,0 +1,52 @@
+name: Verificar site
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Compilar
+        run: npm run build
+
+      - name: Instalar Puppeteer
+        run: npm i --no-save puppeteer-core@23
+
+      - name: Subir servidor
+        run: |
+          mkdir -p out /tmp/serve
+          ln -sfn "$PWD/dist" /tmp/serve/Tabletop-RPG
+          python3 -m http.server 8000 --directory /tmp/serve > /tmp/serve.log 2>&1 &
+          sleep 3
+          curl -s -o /dev/null -w 'build: %{http_code}\n' http://127.0.0.1:8000/Tabletop-RPG/
+
+      - name: Capturar telas
+        run: |
+          export CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)"
+          export SITE_URL="http://127.0.0.1:8000/Tabletop-RPG/"
+          echo "chrome: $CHROME_PATH"
+          node scripts/verificar.mjs
+          cat out/relatorio-site.txt
+
+      - name: Publicar capturas em issue
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if ls out/*.jpg >/dev/null 2>&1; then node scripts/publicar-capturas.mjs; fi
