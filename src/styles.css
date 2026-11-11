@@ -29,3 +29,8 @@
 .group-name span{font-size:10px;font-weight:550;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .group-name em{font-style:normal;font-size:8px;color:#8ea582;background:#2a3a25;border-radius:8px;padding:1px 6px;margin-left:auto}
 .scene-row.in-group{margin-left:16px;border-left:1px solid #3a4c33;border-radius:0 5px 5px 0}
+
+/* Régua e alinhamento */
+.ruler-readout{display:flex;align-items:center;gap:7px;width:max-content;margin-bottom:8px;padding:5px 12px;border:1px solid #6e8857;border-radius:20px;background:rgba(38,52,38,.88);color:#d7edb8;font-size:9px;letter-spacing:.2px;backdrop-filter:blur(6px)}
+.ruler-readout strong{font-size:10px;font-weight:600}
+.ruler-readout span{color:#9cb490}

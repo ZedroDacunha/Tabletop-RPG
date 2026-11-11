@@ -9,7 +9,7 @@ export type Kind = typeof KINDS[number];
 export type Group = { id:string; name:string };
 export type Entity = { id:string; kind:Kind|'model'; assetId?:string; groupId?:string; name:string; position:Vec3; rotation:Vec3; scale:Vec3; visible:boolean; locked:boolean; color:string };
 export type Asset = { id:string; name:string; data:string; bytes:number };
-export type Project = { schemaVersion:1; id:string; name:string; updatedAt:string; objects:Entity[]; assets:Asset[]; groups?:Group[]; settings:{ size:number; gridSize:number; grid:boolean; snap:boolean; atmosphere:'dawn'|'day'|'dusk'|'night'; background:string }; camera?:{position:Vec3;target:Vec3} };
+export type Project = { schemaVersion:1; id:string; name:string; updatedAt:string; objects:Entity[]; assets:Asset[]; groups?:Group[]; settings:{ size:number; gridSize:number; grid:boolean; snap:boolean; guides?:boolean; atmosphere:'dawn'|'day'|'dusk'|'night'; background:string }; camera?:{position:Vec3;target:Vec3} };
 export const uid = () => crypto.randomUUID();
 export const GROUP_NAME_MAX=60;
 export function makeGroup(name:string):Group{return {id:uid(),name:name.trim().slice(0,GROUP_NAME_MAX)||'Grupo'};}
@@ -43,7 +43,38 @@ export function selectionCenter(entities:Entity[]):Vec3{
  return [sum[0]/entities.length,sum[1]/entities.length,sum[2]/entities.length];
 }
 
-export function emptyProject():Project {return {schemaVersion:1,id:uid(),name:'Meu novo mundo',updatedAt:new Date().toISOString(),objects:[],assets:[],settings:{size:30,gridSize:1,grid:true,snap:true,atmosphere:'day',background:'#202a28'}};}
+export const GUIDE_THRESHOLD=.75;
+export type Neighbour={ entity:Entity; distance:number; delta:Vec3 };
+export function nearestNeighbour(entity:Entity, objects:Entity[]):Neighbour|null{
+ let best:Neighbour|null=null;
+ for(const other of objects){
+  if(other.id===entity.id||!other.visible)continue;
+  const delta:Vec3=[other.position[0]-entity.position[0],other.position[1]-entity.position[1],other.position[2]-entity.position[2]];
+  const distance=Math.hypot(...delta);
+  if(!best||distance<best.distance)best={entity:other,distance,delta};
+ }
+ return best;
+}
+export function alignToNeighbours(position:Vec3, entity:Entity, objects:Entity[], threshold=GUIDE_THRESHOLD):{position:Vec3;aligned:string[]}{
+ const axis=(index:0|2):{name:string;value:number;gap:number}|null=>{
+  let best:{name:string;value:number;gap:number}|null=null;
+  for(const other of objects){
+   if(other.id===entity.id||!other.visible)continue;
+   const gap=Math.abs(other.position[index]-position[index]);
+   if(gap>threshold)continue;
+   if(!best||gap<best.gap)best={name:other.name,value:other.position[index],gap};
+  }
+  return best?best:null;
+ };
+ let x=axis(0),z=axis(2);
+ // Encaixar nos dois eixos na mesma peça empilharia uma sobre a outra: fica só o eixo mais próximo.
+ if(x&&z&&x.name===z.name){if(z.gap<x.gap)x=null;else z=null}
+ const aligned:string[]=[];
+ if(x)aligned.push(x.name);if(z)aligned.push(z.name);
+ return {position:[x?x.value:position[0],position[1],z?z.value:position[2]],aligned};
+}
+
+export function emptyProject():Project {return {schemaVersion:1,id:uid(),name:'Meu novo mundo',updatedAt:new Date().toISOString(),objects:[],assets:[],settings:{size:30,gridSize:1,grid:true,snap:true,guides:true,atmosphere:'day',background:'#202a28'}};}
 export function makeEntity(kind:Entity['kind'],name:string,position:Vec3=[0,0,0],assetId?:string):Entity {return {id:uid(),kind,name,position,rotation:[0,0,0],scale:[1,1,1],visible:true,locked:false,color:kind==='cube'?'#a7bf99':kind==='sphere'?'#d5b68c':'#9eafa9',...(assetId?{assetId}:{})};}
 function object(v:unknown):v is Record<string,unknown>{return typeof v==='object'&&v!==null&&!Array.isArray(v);}
 function vector(v:unknown,scale=false):v is Vec3{return Array.isArray(v)&&v.length===3&&v.every(x=>typeof x==='number'&&Number.isFinite(x)&&(scale?x>=0.05&&x<=50:Math.abs(x)<=5000));}
@@ -61,7 +92,7 @@ export function validateProject(raw:unknown):Project {
  if(new Set(objects.map(o=>o.id)).size!==objects.length)return fail('O projeto contém objetos com identificadores repetidos.');
  if(groups){const known=new Set(groups.map(g=>g.id));objects=objects.map(o=>{const {groupId,...rest}=o;return groupId&&known.has(groupId)?{groupId,...rest}:rest})}
  else objects=objects.map(o=>{const {groupId,...rest}=o;return rest});
- const s=raw.settings;if(!object(s)||!Number.isFinite(s.size)||Number(s.size)<10||Number(s.size)>100||!Number.isFinite(s.gridSize)||Number(s.gridSize)<0.25||Number(s.gridSize)>5||typeof s.grid!=='boolean'||typeof s.snap!=='boolean'||!['dawn','day','dusk','night'].includes(String(s.atmosphere))||!color(s.background))return fail('As configurações do mapa são inválidas.');
+ const s=raw.settings;if(!object(s)||!Number.isFinite(s.size)||Number(s.size)<10||Number(s.size)>100||!Number.isFinite(s.gridSize)||Number(s.gridSize)<0.25||Number(s.gridSize)>5||typeof s.grid!=='boolean'||typeof s.snap!=='boolean'||(s.guides!==undefined&&typeof s.guides!=='boolean')||!['dawn','day','dusk','night'].includes(String(s.atmosphere))||!color(s.background))return fail('As configurações do mapa são inválidas.');
  const camera=raw.camera;if(camera!==undefined&&(!object(camera)||!vector(camera.position)||!vector(camera.target)))return fail('A posição da câmera é inválida.');
  return {schemaVersion:1,id:raw.id,name:raw.name,updatedAt:typeof raw.updatedAt==='string'?raw.updatedAt:new Date().toISOString(),objects,assets,settings:s as Project['settings'],...(groups?{groups}:{}),...(camera?{camera:camera as Project['camera']}:{})};
 }

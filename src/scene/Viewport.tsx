@@ -4,7 +4,7 @@ import {Grid,OrbitControls,TransformControls} from '@react-three/drei';
 import type {OrbitControls as Controls} from 'three-stdlib';
 import * as THREE from 'three';
 import {BuiltinModel,ImportedModel} from './Models';
-import {selectionCenter,type Project,type Entity,type Vec3} from '../features/projects/project';
+import {alignToNeighbours,nearestNeighbour,selectionCenter,type Project,type Entity,type Vec3} from '../features/projects/project';
 import {CompatibleMap} from './CompatibleMap';
 import {downloadFile} from '../features/projects/storage';
 export type Tool='select'|'translate'|'rotate'|'scale';
@@ -29,7 +29,7 @@ function CameraRig({project,command,onCamera}:Pick<Props,'project'|'command'|'on
 }
 function Placed({entity,project,selection,tool,onSelect,onTransform,onError}:Omit<Props,'placement'|'command'|'onPlace'|'onCamera'|'onGroupChange'|'onGroupEnd'>&{entity:Entity}){
  const ref=useRef<THREE.Group>(null);const active=selection.includes(entity.id);const edit=active&&!entity.locked&&tool!=='select'&&selection.length===1;const asset=project.assets.find(a=>a.id===entity.assetId);
- const capture=()=>{const o=ref.current;if(o)onTransform(entity.id,{position:o.position.toArray() as Vec3,rotation:[o.rotation.x,o.rotation.y,o.rotation.z],scale:o.scale.toArray().map(s=>Math.max(.05,Math.min(50,s))) as Vec3})};
+ const capture=()=>{const o=ref.current;if(!o)return;const raw=o.position.toArray() as Vec3;const position=project.settings.guides!==false?alignToNeighbours(raw,entity,project.objects).position:raw;onTransform(entity.id,{position,rotation:[o.rotation.x,o.rotation.y,o.rotation.z],scale:o.scale.toArray().map(s=>Math.max(.05,Math.min(50,s))) as Vec3})};
  const model=<group ref={ref} name={entity.id} position={entity.position} rotation={entity.rotation} scale={entity.scale} visible={entity.visible} onClick={(e:ThreeEvent<MouseEvent>)=>{e.stopPropagation();if(e.delta<5)onSelect(entity.id,e.shiftKey)}}>
  {entity.kind==='model'&&asset?<ImportedModel asset={asset} onError={onError}/>:entity.kind!=='model'?<BuiltinModel kind={entity.kind} color={entity.color}/>:null}
  {active&&<mesh rotation={[-Math.PI/2,0,0]} position={[0,.015,0]} scale={[1/Math.max(.05,entity.scale[0]),1/Math.max(.05,entity.scale[2]),1]}><ringGeometry args={[1.45,1.49,64]}/><meshBasicMaterial color="#d1edb2" transparent opacity={.85} depthWrite={false}/></mesh>}
@@ -104,6 +104,16 @@ function HorizonRing({size,color}:{size:number;color:string}){
  },[size]);
  return <group>{hills.map((hill,index)=><mesh key={index} position={[hill.x,-.2,hill.z]} rotation={[0,hill.rot,0]} scale={[hill.w,hill.h,hill.w]}><sphereGeometry args={[1,8,4,0,Math.PI*2,0,Math.PI/2]}/><meshStandardMaterial color={color} roughness={1} flatShading/></mesh>)}</group>;
 }
+function RulerLine({from,to}:{from:Vec3;to:Vec3}){
+ const object=useMemo(()=>{
+  const geometry=new THREE.BufferGeometry();
+  geometry.setAttribute('position',new THREE.Float32BufferAttribute([from[0],from[1]+.06,from[2],to[0],to[1]+.06,to[2]],3));
+  const material=new THREE.LineDashedMaterial({color:'#f4ffdd',dashSize:.34,gapSize:.22,transparent:true,opacity:.9});
+  const line=new THREE.Line(geometry,material);line.computeLineDistances();return line;
+ },[from[0],from[1],from[2],to[0],to[1],to[2]]);
+ useEffect(()=>()=>{object.geometry.dispose();(object.material as THREE.Material).dispose()},[object]);
+ return <primitive object={object}/>;
+}
 const clampScale=(value:number)=>Math.max(.05,Math.min(50,value));
 function GroupGizmo({entities,tool,snap,gridSize,onChange,onEnd}:{entities:Entity[];tool:Exclude<Tool,'select'>;snap:boolean;gridSize:number;onChange:(updates:Record<string,Partial<Entity>>)=>void;onEnd:()=>void}){
  const pivot=useRef<THREE.Group>(null);
@@ -129,6 +139,8 @@ function World(props:Props){
  const {project,selection,placement}=props;const [point,setPoint]=useState<Vec3>([0,0,0]);const [hover,setHover]=useState(false);const s=project.settings;
  const ambience=AMBIENCE[s.atmosphere]??AMBIENCE.day;
  const {gl,invalidate}=useThree();
+ const guided=selection.length===1?project.objects.find(o=>o.id===selection[0]):undefined;
+ const neighbour=project.settings.guides!==false&&guided?nearestNeighbour(guided,project.objects):null;
  useEffect(()=>{gl.toneMappingExposure=ambience.exposure;invalidate()},[ambience,gl,invalidate]);
  const fogColor=useMemo(()=>mixColors(s.background,ambience.skyHorizon,ambience.fogTint),[ambience,s.background]);
  const sky=useMemo(()=>({top:mixColors(ambience.skyTop,s.background,.1),horizon:mixColors(ambience.skyHorizon,s.background,.26),glow:mixColors(ambience.glow,s.background,.1),deep:mixColors(s.background,'#050a08',.45)}),[ambience,s.background]);
@@ -146,6 +158,7 @@ function World(props:Props){
  <mesh receiveShadow rotation={[-Math.PI/2,0,0]} position={[0,.002,0]} onPointerMove={e=>{if(placement){setPoint(floorPoint(e));setHover(true)}}} onPointerOut={()=>setHover(false)} onClick={e=>{e.stopPropagation();if(e.delta<5){if(placement)props.onPlace(floorPoint(e));else props.onSelect(null,false)}}}><planeGeometry args={[s.size,s.size]}/><meshStandardMaterial map={groundTexture??undefined} roughness={1}/></mesh>
  {s.grid&&<Grid args={[s.size,s.size]} position={[0,.01,0]} cellSize={s.gridSize} cellThickness={.5} cellColor={ambience.grid} sectionSize={s.gridSize*5} sectionThickness={1} sectionColor={ambience.gridSection} fadeDistance={100} fadeStrength={1} followCamera={false} infiniteGrid={false}/>}
  {project.objects.map(entity=><Placed key={entity.id} {...props} entity={entity}/>)}
+ {guided&&neighbour&&<RulerLine from={guided.position} to={neighbour.entity.position}/>}
  {placement&&hover&&<group position={point}><mesh position={[0,.04,0]} rotation={[-Math.PI/2,0,0]}><ringGeometry args={[.7,.8,32]}/><meshBasicMaterial color="#e4f7b8" transparent opacity={.9}/></mesh><mesh position={[0,.02,0]} rotation={[-Math.PI/2,0,0]}><planeGeometry args={[1.5,1.5]}/><meshBasicMaterial color="#c0e4a4" transparent opacity={.25} depthWrite={false}/></mesh></group>}
  {selection.length>1&&props.tool!=='select'&&<GroupGizmo key={`${selection.join(',')}:${props.tool}`} entities={project.objects.filter(o=>selection.includes(o.id))} tool={props.tool} snap={s.snap} gridSize={s.gridSize} onChange={props.onGroupChange} onEnd={props.onGroupEnd}/>}
  <CameraRig project={project} command={props.command} onCamera={props.onCamera}/>

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {emptyProject,exampleProject,makeEntity,makeGroup,assignGroup,pruneGroups,withGroups,nudgeEntity,selectionCenter,toggleSelection,validateProject,KINDS} from './project';
+import {emptyProject,exampleProject,makeEntity,makeGroup,assignGroup,pruneGroups,withGroups,nudgeEntity,selectionCenter,toggleSelection,nearestNeighbour,alignToNeighbours,validateProject,KINDS} from './project';
 import {catalog} from '../assets/catalog';
 
 test('example survives a complete JSON export/import without losing transforms',()=>{
@@ -85,4 +85,36 @@ test('rejects malformed groups and drops references to missing ones',()=>{
  const duplicated=JSON.parse(JSON.stringify(p));duplicated.groups=[p.groups[0],{...p.groups[0]}];
  assert.throws(()=>validateProject(duplicated),/grupos com identificadores/);
  assert.throws(()=>validateProject({...JSON.parse(JSON.stringify(p)),groups:[{id:'a',name:'   '}]}),/grupo do mapa/);
+});
+
+test('the ruler finds the closest visible neighbour and ignores the piece itself',()=>{
+ const a=makeEntity('cube','A',[0,0,0]),b=makeEntity('cube','B',[3,0,0]),c=makeEntity('cube','C',[0,0,1.5]);
+ const near=nearestNeighbour(a,[a,b,c]);
+ assert.equal(near?.entity.id,c.id);
+ assert.equal(near?.distance,1.5);
+ assert.equal(nearestNeighbour(a,[a,{...b,visible:false},b])?.entity.id,b.id);
+ assert.equal(nearestNeighbour(a,[a]),null);
+});
+
+test('alignment snaps only the axes that are close to another piece',()=>{
+ const a=makeEntity('cube','A',[0,0,0]);
+ const b=makeEntity('cube','B',[5,0,3]);
+ const near=alignToNeighbours([4.6,0,3.9],a,[a,b]);
+ assert.deepEqual(near.position,[5,0,3.9]);
+ assert.deepEqual(near.aligned,['B']);
+ // dois vizinhos diferentes podem fornecer cada eixo
+ const c=makeEntity('cube','C',[0,0,3]);
+ const far=makeEntity('cube','F',[5,0,9]);
+ const crossed=alignToNeighbours([4.9,0,3.2],a,[a,far,c]);
+ assert.deepEqual(crossed.position,[5,0,3]);
+ assert.deepEqual(crossed.aligned,['F','C']);
+ // o mesmo vizinho nos dois eixos empilharia as peças: fica só o eixo mais próximo
+ const stacked=alignToNeighbours([4.9,0,3.3],a,[a,b]);
+ assert.deepEqual(stacked.position,[5,0,3.3]);
+ assert.deepEqual(stacked.aligned,['B']);
+ assert.deepEqual(alignToNeighbours([10,0,10],a,[a,b]).position,[10,0,10]);
+ assert.deepEqual(alignToNeighbours([10,0,10],a,[a,b]).aligned,[]);
+ assert.deepEqual(alignToNeighbours([4.6,0,3.9],a,[a,{...b,visible:false}]).position,[4.6,0,3.9]);
+ const p=emptyProject();p.settings.guides='talvez' as unknown as boolean;
+ assert.throws(()=>validateProject(p),/configurações/);
 });
