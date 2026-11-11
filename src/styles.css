@@ -12,3 +12,5 @@
 .preset-info span{font-size:8.5px;color:#8b9a86;line-height:1.35}
 .preset-info small{font-size:8px;color:#71836f;letter-spacing:.4px}
 .preset-add{display:grid;place-items:center;color:#a9c187}
+.library-tabs{padding:0 10px;gap:10px}
+.library-tabs>button{font-size:10px;gap:6px;padding:0 2px;white-space:nowrap}
