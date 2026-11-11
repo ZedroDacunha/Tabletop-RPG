@@ -147,3 +147,15 @@ test('batch distribution spreads the pieces evenly between the extremes',()=>{
  assert.deepEqual(withLocked.map(o=>o.position[0]),[0,10,20,30,15]);
  assert.equal(distributeEntities(pieces,[pieces[0].id,pieces[2].id],'x'),pieces,'distribuir exige três peças');
 });
+
+test('the presentation script survives export and refuses broken views',()=>{
+ const p=emptyProject();
+ p.views=[{id:'v1',name:'Vista do portão',position:[10,8,12],target:[0,0,0]},{id:'v2',name:'Vista da taverna',position:[-6,5,4],target:[1,0,-2]}];
+ const restored=validateProject(JSON.parse(JSON.stringify(p)));
+ assert.deepEqual(restored.views,p.views);
+ assert.throws(()=>validateProject({...JSON.parse(JSON.stringify(p)),views:[{id:'a',name:'  ',position:[0,0,0],target:[0,0,0]}]}),/vista do roteiro/);
+ assert.throws(()=>validateProject({...JSON.parse(JSON.stringify(p)),views:[{id:'a',name:'A',position:[NaN,0,0],target:[0,0,0]}]}),/vista do roteiro/);
+ assert.throws(()=>validateProject({...JSON.parse(JSON.stringify(p)),views:[{id:'a',name:'A',position:[0,0,0],target:[0,0,0]},{id:'a',name:'B',position:[0,0,0],target:[0,0,0]}]}),/identificadores repetidos/);
+ const tooMany=Array.from({length:25},(_,i)=>({id:`v${i}`,name:`V${i}`,position:[0,0,0],target:[0,0,0]}));
+ assert.throws(()=>validateProject({...JSON.parse(JSON.stringify(p)),views:tooMany}),/roteiro de apresentação/);
+});
