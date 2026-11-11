@@ -38,6 +38,7 @@ O build publicado leva de 1 a 2 minutos para aparecer no ar. O GitHub Pages prec
 - Inserir, selecionar, mover, rotacionar, escalar, duplicar, ocultar, travar e remover objetos.
 - **Grupos**: `Ctrl/Cmd + G` agrupa a seleção num grupo nomeado (o nome pode ser trocado no painel de propriedades) e `Ctrl/Cmd + Shift + G` desfaz. Na aba Cena o grupo aparece como uma pasta recolhível com a contagem de peças; clicar no nome seleciona o grupo inteiro e o gizmo age nele como uma peça única. Duplicar um grupo cria um grupo novo com as cópias, e o grupo desaparece sozinho quando a última peça sai.
 - **Seleção múltipla**: Shift + clique (ou Ctrl/Cmd + clique) soma e retira peças no mapa e na lista da Cena; Ctrl/Cmd + A seleciona todas. As peças selecionadas ganham anel, e o gizmo aparece no centro do grupo para arrastar, girar ou escalar tudo junto. Setas, `Ctrl+D` e `Delete` valem para a seleção inteira, e o painel mostra as ações do conjunto (focar, duplicar, travar, remover).
+- **Meus mapas**: o botão no topo abre a biblioteca de mapas salvos neste navegador, com miniatura gerada a partir das peças, contagem e quando foi salvo. Dá para abrir outro mapa, excluir os que não usa mais e criar um novo sem perder o atual; o último aberto volta ao recarregar a página.
 - **Camadas** (painel Propriedades → Camadas): Natureza, Construções, Objetos, Básicos e Importados aparecem com a contagem de peças e podem ser ocultadas ou travadas de uma vez. Ocultar só tira o desenho da cena — nada é apagado, e o estado fica salvo com o mapa.
 - **Régua e alinhamento** (`M`): com uma peça selecionada, uma linha pontilhada liga a peça à vizinha mais próxima e um selo mostra a distância em metros; ao soltar o arrasto, a peça encaixa na linha X ou Z de uma vizinha quando o desvio é menor que 0,75 m. Desligado, o arrasto fica livre.
 - **Cenários prontos** (aba Cenários): clareira, acampamento, ruína, santuário e lagoa entram no mapa com um clique, num ponto livre perto do centro, e podem ser desfeitos com Ctrl+Z.
@@ -45,7 +46,7 @@ O build publicado leva de 1 a 2 minutos para aparecer no ar. O GitHub Pages prec
 - Ambientação com céu em gradiente, sol/lua, estrelas à noite, colinas no horizonte, névoa por distância, chão com textura procedural e vinheta sobre o viewport.
 - Desfazer/refazer até 40 operações.
 - Importar GLB autocontido ou glTF com seus arquivos `.bin` e texturas selecionados juntos.
-- Salvamento automático em IndexedDB, exportação/importação `.tabletop` com modelos incorporados e exportação de imagem PNG.
+- Salvamento automático em IndexedDB com vários mapas por navegador, exportação/importação `.tabletop` com modelos incorporados e exportação de imagem PNG.
 - Modo esquemático 2D quando WebGL não está disponível: permite posicionar, selecionar e editar propriedades; exporta SVG. Os símbolos não reproduzem a geometria ou rotação de modelos importados. Não oferece câmera 3D.
 
 ## Controles
