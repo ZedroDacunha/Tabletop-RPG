@@ -63,7 +63,7 @@ if (only !== 'galeria') {
     return false;
   });
   await new Promise((r) => setTimeout(r, 3200));
-  await shot(page, '3-dia', { x: 273, y: 60, width: 745, height: 620 });
+  await shot(page, '3-dia', { x: 0, y: 0, width: 1400, height: 760 });
 
   const dawn = await page.evaluate(() => {
     const button = [...document.querySelectorAll('.light-options button')].find((b) => b.textContent?.includes('Amanhecer'));
