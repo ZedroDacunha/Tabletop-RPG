@@ -56,7 +56,7 @@ export function nearestNeighbour(entity:Entity, objects:Entity[]):Neighbour|null
  return best;
 }
 export function alignToNeighbours(position:Vec3, entity:Entity, objects:Entity[], threshold=GUIDE_THRESHOLD):{position:Vec3;aligned:string[]}{
- const axis=(index:0|2):{name:string;value:number}|null=>{
+ const axis=(index:0|2):{name:string;value:number;gap:number}|null=>{
   let best:{name:string;value:number;gap:number}|null=null;
   for(const other of objects){
    if(other.id===entity.id||!other.visible)continue;
@@ -64,10 +64,13 @@ export function alignToNeighbours(position:Vec3, entity:Entity, objects:Entity[]
    if(gap>threshold)continue;
    if(!best||gap<best.gap)best={name:other.name,value:other.position[index],gap};
   }
-  return best?{name:best.name,value:best.value}:null;
+  return best?best:null;
  };
- const x=axis(0),z=axis(2);const aligned:string[]=[];
- if(x)aligned.push(x.name);if(z&&z.name!==x?.name)aligned.push(z.name);
+ let x=axis(0),z=axis(2);
+ // Encaixar nos dois eixos na mesma peça empilharia uma sobre a outra: fica só o eixo mais próximo.
+ if(x&&z&&x.name===z.name){if(z.gap<x.gap)x=null;else z=null}
+ const aligned:string[]=[];
+ if(x)aligned.push(x.name);if(z)aligned.push(z.name);
  return {position:[x?x.value:position[0],position[1],z?z.value:position[2]],aligned};
 }
 

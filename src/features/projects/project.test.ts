@@ -97,13 +97,24 @@ test('the ruler finds the closest visible neighbour and ignores the piece itself
 });
 
 test('alignment snaps only the axes that are close to another piece',()=>{
- const a=makeEntity('cube','A',[0,0,0]),b=makeEntity('cube','B',[5,0,3]);
- const near=alignToNeighbours([4.6,0,3.4],a,[a,b]);
- assert.deepEqual(near.position,[5,0,3]);
+ const a=makeEntity('cube','A',[0,0,0]);
+ const b=makeEntity('cube','B',[5,0,3]);
+ const near=alignToNeighbours([4.6,0,3.9],a,[a,b]);
+ assert.deepEqual(near.position,[5,0,3.9]);
  assert.deepEqual(near.aligned,['B']);
+ // dois vizinhos diferentes podem fornecer cada eixo
+ const c=makeEntity('cube','C',[0,0,3]);
+ const far=makeEntity('cube','F',[5,0,9]);
+ const crossed=alignToNeighbours([4.9,0,3.2],a,[a,far,c]);
+ assert.deepEqual(crossed.position,[5,0,3]);
+ assert.deepEqual(crossed.aligned,['F','C']);
+ // o mesmo vizinho nos dois eixos empilharia as peças: fica só o eixo mais próximo
+ const stacked=alignToNeighbours([4.9,0,3.3],a,[a,b]);
+ assert.deepEqual(stacked.position,[5,0,3.3]);
+ assert.deepEqual(stacked.aligned,['B']);
  assert.deepEqual(alignToNeighbours([10,0,10],a,[a,b]).position,[10,0,10]);
  assert.deepEqual(alignToNeighbours([10,0,10],a,[a,b]).aligned,[]);
- assert.deepEqual(alignToNeighbours([4.6,0,3.4],a,[a,{...b,visible:false}]).position,[4.6,0,3.4]);
+ assert.deepEqual(alignToNeighbours([4.6,0,3.9],a,[a,{...b,visible:false}]).position,[4.6,0,3.9]);
  const p=emptyProject();p.settings.guides='talvez' as unknown as boolean;
  assert.throws(()=>validateProject(p),/configurações/);
 });
