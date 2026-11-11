@@ -1,9 +1,14 @@
 export type Vec3 = [number, number, number];
-export const KINDS = ['pine','oak','rock','wall','arch','floor','tent','campfire','crate','barrel','well','column','cube','sphere','cylinder'] as const;
+export const KINDS = [
+ 'pine','oak','birch','deadtree','bush','mushrooms','log','crystal','pond',
+ 'rock','wall','arch','floor','tower','stairs','fence','bridge','shrine',
+ 'tent','campfire','lantern','banner','statue','chest','cart','crate','barrel','well','column',
+ 'cube','sphere','cylinder',
+] as const;
 export type Kind = typeof KINDS[number];
 export type Entity = { id:string; kind:Kind|'model'; assetId?:string; name:string; position:Vec3; rotation:Vec3; scale:Vec3; visible:boolean; locked:boolean; color:string };
 export type Asset = { id:string; name:string; data:string; bytes:number };
-export type Project = { schemaVersion:1; id:string; name:string; updatedAt:string; objects:Entity[]; assets:Asset[]; settings:{ size:number; gridSize:number; grid:boolean; snap:boolean; atmosphere:'day'|'dusk'|'night'; background:string }; camera?:{position:Vec3;target:Vec3} };
+export type Project = { schemaVersion:1; id:string; name:string; updatedAt:string; objects:Entity[]; assets:Asset[]; settings:{ size:number; gridSize:number; grid:boolean; snap:boolean; atmosphere:'dawn'|'day'|'dusk'|'night'; background:string }; camera?:{position:Vec3;target:Vec3} };
 export const uid = () => crypto.randomUUID();
 export const MAX_PROJECT_BYTES=100*1024*1024;
 export function emptyProject():Project {return {schemaVersion:1,id:uid(),name:'Meu novo mundo',updatedAt:new Date().toISOString(),objects:[],assets:[],settings:{size:30,gridSize:1,grid:true,snap:true,atmosphere:'day',background:'#202a28'}};}
@@ -20,7 +25,7 @@ export function validateProject(raw:unknown):Project {
  const assetIds=new Set(assets.map(a=>a.id));if(assetIds.size!==assets.length)return fail('O projeto contém modelos com identificadores repetidos.');
  const objects:Entity[]=raw.objects.map(o=>{if(!object(o)||typeof o.id!=='string'||typeof o.name!=='string'||o.name.length>120||!((KINDS as readonly unknown[]).includes(o.kind)||o.kind==='model')||!vector(o.position)||!vector(o.rotation)||!vector(o.scale,true)||typeof o.visible!=='boolean'||typeof o.locked!=='boolean'||!color(o.color))return fail('Um objeto tem propriedades inválidas.');if(o.kind==='model'&&(typeof o.assetId!=='string'||!assetIds.has(o.assetId)))return fail('O projeto está incompleto: falta o arquivo de um modelo 3D.');return o as Entity;});
  if(new Set(objects.map(o=>o.id)).size!==objects.length)return fail('O projeto contém objetos com identificadores repetidos.');
- const s=raw.settings;if(!object(s)||!Number.isFinite(s.size)||Number(s.size)<10||Number(s.size)>100||!Number.isFinite(s.gridSize)||Number(s.gridSize)<0.25||Number(s.gridSize)>5||typeof s.grid!=='boolean'||typeof s.snap!=='boolean'||!['day','dusk','night'].includes(String(s.atmosphere))||!color(s.background))return fail('As configurações do mapa são inválidas.');
+ const s=raw.settings;if(!object(s)||!Number.isFinite(s.size)||Number(s.size)<10||Number(s.size)>100||!Number.isFinite(s.gridSize)||Number(s.gridSize)<0.25||Number(s.gridSize)>5||typeof s.grid!=='boolean'||typeof s.snap!=='boolean'||!['dawn','day','dusk','night'].includes(String(s.atmosphere))||!color(s.background))return fail('As configurações do mapa são inválidas.');
  const camera=raw.camera;if(camera!==undefined&&(!object(camera)||!vector(camera.position)||!vector(camera.target)))return fail('A posição da câmera é inválida.');
  return {schemaVersion:1,id:raw.id,name:raw.name,updatedAt:typeof raw.updatedAt==='string'?raw.updatedAt:new Date().toISOString(),objects,assets,settings:s as Project['settings'],...(camera?{camera:camera as Project['camera']}:{})};
 }
@@ -37,5 +42,20 @@ export function exampleProject():Project{
  add('tent','Tenda do explorador',-4.5,1.3,1.25,.55);add('tent','Tenda de suprimentos',4,1.8,1.1,-.6);
  add('campfire','Fogueira do acampamento',0,1,1.15);add('crate','Caixa de provisões',-5,4,.8,.1);add('crate','Equipamentos',-6.2,3,.65,-.1);
  add('barrel','Barril de água',5,4,.85);add('barrel','Barril de suprimentos',6,3.7,.8);add('well','Poço esquecido',6,-1,1.1);
+ // Camada de ambientação: vegetação rasteira, água, luzes e detalhes das ruínas.
+ add('birch','Bétula nova',-8.4,-7,1.1,.4);add('birch','Bétula jovem',7.6,-8.4,.95,-.7);add('birch','Bétula do caminho',-11.5,4.5,1.2,1.1);
+ add('deadtree','Árvore seca',11.6,1.6,1.05,.3);add('deadtree','Tronco retorcido',-12.2,-.5,.9,1.9);
+ add('bush','Arbusto',-6.5,-3.5,.9,.2);add('bush','Arbusto',7.8,2.6,1,-.4);add('bush','Arbusto',-2.6,7.4,.85,.8);add('bush','Arbusto',3.4,-7.2,.8,1.3);
+ add('mushrooms','Cogumelos',-7.8,-9.2,.9,0);add('mushrooms','Cogumelos',5.2,6.6,.8,.9);
+ add('log','Tronco caído',-9.4,8.2,1,.6);add('log','Tronco caído',9.6,-6.4,.85,-.5);
+ add('crystal','Cristais',-11.8,9.4,.9,0);
+ add('pond','Lagoa',8.6,-8.8,1.05,0);
+ add('bridge','Ponte de madeira',-6.2,6.4,.75,.35);
+ add('fence','Cerca do acampamento',-1.8,5.6,.8,.15);add('fence','Cerca do acampamento',2.2,5.9,.8,-.1);
+ add('lantern','Lanterna da tenda',-3.2,2.6,.95,0);add('lantern','Lanterna do acampamento',2.8,2.4,.95,0);
+ add('banner','Estandarte da expedição',1.6,4.8,.9,-.4);
+ add('statue','Estátua esquecida',-6.4,-5.2,.9,.5);add('chest','Baú do acampamento',-5.4,2.2,.8,.3);
+ add('cart','Carrinho de suprimentos',6.6,5.2,.8,-.75);add('stairs','Escadaria da ruína',0,-3.4,.95,0);
+ add('tower','Torre caída',-9.2,-1.2,1.05,.2);add('shrine','Santuário antigo',0,-8.6,1,0);
  p.camera={position:[23,20,27],target:[0,0,0]};return p;
 }

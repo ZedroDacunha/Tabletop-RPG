@@ -32,11 +32,12 @@ O build publicado leva de 1 a 2 minutos para aparecer no ar. O GitHub Pages prec
 
 ## O que funciona
 
-- Cena vazia ou cenário de exemplo com 40 objetos.
+- Cena vazia ou cenário de exemplo com 67 objetos.
 - Câmera orbital, deslocamento, zoom, vista superior e foco no objeto.
-- Biblioteca de 15 peças: árvores, pedras, ruínas, acampamento, decoração e formas básicas.
+- Biblioteca de 32 peças: árvores (pinheiro, carvalho, bétula, árvore seca), vegetação rasteira, rochas, lagoa, cristais, ruínas (muralha, arco, torre, coluna, escadaria, santuário), estruturas (poço, cerca, ponte), acampamento (tenda, fogueira, lanterna, estandarte, caixote, barril, carrinho, baú), decoração (estátua, piso de pedra) e formas básicas.
 - Inserir, selecionar, mover, rotacionar, escalar, duplicar, ocultar, travar e remover objetos.
-- Grade, encaixe, tamanho do mapa, iluminação e cor de fundo.
+- Grade, encaixe, tamanho do mapa, cor de fundo e quatro atmosferas (amanhecer, dia, entardecer e noite).
+- Ambientação com céu em gradiente, sol/lua, estrelas à noite, colinas no horizonte, névoa por distância, chão com textura procedural e vinheta sobre o viewport.
 - Desfazer/refazer até 40 operações.
 - Importar GLB autocontido ou glTF com seus arquivos `.bin` e texturas selecionados juntos.
 - Salvamento automático em IndexedDB, exportação/importação `.tabletop` com modelos incorporados e exportação de imagem PNG.
@@ -66,7 +67,7 @@ O protótipo mantém **um mapa atual por navegador/origem**. Não há conta, ban
 
 Limites de validação: 1.500 objetos, 80 modelos por mapa, 25 MB por modelo incorporado, 60 MB/64 arquivos por lote de importação e 100 MB por projeto aberto. Estes são limites de arquivo, não uma garantia de desempenho. Modelos complexos podem exigir menos objetos e mais memória. Texturas externas devem acompanhar o glTF. Draco, Meshopt, KTX2 e animação de personagens não fazem parte desta versão.
 
-O mapa é renderizado sob demanda, com resolução limitada a 1,5× e sombras de 1024 px. Os modelos não são enviados a um servidor pelo aplicativo. Fontes de interface usam Google Fonts, com fontes locais alternativas.
+O mapa é renderizado sob demanda, com resolução limitada a 1,5× e sombras de 2048 px. As colinas do horizonte e o céu são gerados no navegador, sem assets externos, e não fazem parte do mapa editável (não podem ser selecionadas nem exportadas). Os modelos não são enviados a um servidor pelo aplicativo. Fontes de interface usam Google Fonts, com fontes locais alternativas.
 
 ## Estrutura
 
