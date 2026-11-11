@@ -4,13 +4,13 @@ import {Grid,OrbitControls,TransformControls} from '@react-three/drei';
 import type {OrbitControls as Controls} from 'three-stdlib';
 import * as THREE from 'three';
 import {BuiltinModel,ImportedModel} from './Models';
-import type {Project,Entity,Vec3} from '../features/projects/project';
+import {selectionCenter,type Project,type Entity,type Vec3} from '../features/projects/project';
 import {CompatibleMap} from './CompatibleMap';
 import {downloadFile} from '../features/projects/storage';
 export type Tool='select'|'translate'|'rotate'|'scale';
 export type CameraCommand={id:number;type:'home'|'top'|'focus'|'image';position?:Vec3};
 export type Placement={kind:Entity['kind'];name:string;assetId?:string}|null;
-export type ViewportProps={project:Project;selected:string|null;tool:Tool;placement:Placement;command:CameraCommand;onSelect:(id:string|null)=>void;onPlace:(p:Vec3)=>void;onTransform:(id:string,patch:Partial<Entity>)=>void;onCamera:(camera:NonNullable<Project['camera']>)=>void;onError:(msg:string)=>void};
+export type ViewportProps={project:Project;selection:string[];tool:Tool;placement:Placement;command:CameraCommand;onSelect:(id:string|null,additive?:boolean)=>void;onPlace:(p:Vec3)=>void;onTransform:(id:string,patch:Partial<Entity>)=>void;onGroupChange:(updates:Record<string,Partial<Entity>>)=>void;onGroupEnd:()=>void;onCamera:(camera:NonNullable<Project['camera']>)=>void;onError:(msg:string)=>void};
 type Props=ViewportProps;
 class SceneErrorBoundary extends Component<{children:ReactNode},{failed:boolean}>{state={failed:false};static getDerivedStateFromError(){return {failed:true}}render(){if(this.state.failed)return <div className="webgl-error"><h2>Não foi possível iniciar o espaço 3D</h2><p>Confira se a aceleração gráfica está ativa no navegador e recarregue a página. Seu mapa salvo permanece no navegador.</p><button onClick={()=>location.reload()}>Tentar novamente</button></div>;return this.props.children}}
 function CameraRig({project,command,onCamera}:Pick<Props,'project'|'command'|'onCamera'>){
@@ -27,10 +27,10 @@ function CameraRig({project,command,onCamera}:Pick<Props,'project'|'command'|'on
  },[command.id]);
  return <OrbitControls ref={controls} makeDefault enableDamping dampingFactor={.12} minDistance={2} maxDistance={150} maxPolarAngle={Math.PI/2-.025} mouseButtons={{LEFT:undefined,MIDDLE:THREE.MOUSE.PAN,RIGHT:THREE.MOUSE.ROTATE}} onEnd={remember}/>;
 }
-function Placed({entity,project,selected,tool,onSelect,onTransform,onError}:Omit<Props,'placement'|'command'|'onPlace'|'onCamera'>&{entity:Entity}){
- const ref=useRef<THREE.Group>(null);const active=selected===entity.id;const edit=active&&!entity.locked&&tool!=='select';const asset=project.assets.find(a=>a.id===entity.assetId);
+function Placed({entity,project,selection,tool,onSelect,onTransform,onError}:Omit<Props,'placement'|'command'|'onPlace'|'onCamera'|'onGroupChange'|'onGroupEnd'>&{entity:Entity}){
+ const ref=useRef<THREE.Group>(null);const active=selection.includes(entity.id);const edit=active&&!entity.locked&&tool!=='select'&&selection.length===1;const asset=project.assets.find(a=>a.id===entity.assetId);
  const capture=()=>{const o=ref.current;if(o)onTransform(entity.id,{position:o.position.toArray() as Vec3,rotation:[o.rotation.x,o.rotation.y,o.rotation.z],scale:o.scale.toArray().map(s=>Math.max(.05,Math.min(50,s))) as Vec3})};
- const model=<group ref={ref} name={entity.id} position={entity.position} rotation={entity.rotation} scale={entity.scale} visible={entity.visible} onClick={(e:ThreeEvent<MouseEvent>)=>{e.stopPropagation();if(e.delta<5)onSelect(entity.id)}}>
+ const model=<group ref={ref} name={entity.id} position={entity.position} rotation={entity.rotation} scale={entity.scale} visible={entity.visible} onClick={(e:ThreeEvent<MouseEvent>)=>{e.stopPropagation();if(e.delta<5)onSelect(entity.id,e.shiftKey)}}>
  {entity.kind==='model'&&asset?<ImportedModel asset={asset} onError={onError}/>:entity.kind!=='model'?<BuiltinModel kind={entity.kind} color={entity.color}/>:null}
  {active&&<mesh rotation={[-Math.PI/2,0,0]} position={[0,.015,0]} scale={[1/Math.max(.05,entity.scale[0]),1/Math.max(.05,entity.scale[2]),1]}><ringGeometry args={[1.45,1.49,64]}/><meshBasicMaterial color="#d1edb2" transparent opacity={.85} depthWrite={false}/></mesh>}
  </group>;
@@ -104,8 +104,29 @@ function HorizonRing({size,color}:{size:number;color:string}){
  },[size]);
  return <group>{hills.map((hill,index)=><mesh key={index} position={[hill.x,-.2,hill.z]} rotation={[0,hill.rot,0]} scale={[hill.w,hill.h,hill.w]}><sphereGeometry args={[1,8,4,0,Math.PI*2,0,Math.PI/2]}/><meshStandardMaterial color={color} roughness={1} flatShading/></mesh>)}</group>;
 }
+const clampScale=(value:number)=>Math.max(.05,Math.min(50,value));
+function GroupGizmo({entities,tool,snap,gridSize,onChange,onEnd}:{entities:Entity[];tool:Exclude<Tool,'select'>;snap:boolean;gridSize:number;onChange:(updates:Record<string,Partial<Entity>>)=>void;onEnd:()=>void}){
+ const pivot=useRef<THREE.Group>(null);
+ const center=useRef(new THREE.Vector3(...selectionCenter(entities))).current;
+ const start=useRef<{items:{id:string;position:Vec3;rotation:Vec3;scale:Vec3}[]}|null>(null);
+ useEffect(()=>{pivot.current?.position.copy(center)},[center]);
+ const begin=()=>{const p=pivot.current;if(!p)return;p.position.copy(center);p.rotation.set(0,0,0);p.scale.set(1,1,1);start.current={items:entities.map(e=>({id:e.id,position:[...e.position] as Vec3,rotation:[...e.rotation] as Vec3,scale:[...e.scale] as Vec3}))}};
+ const apply=()=>{const p=pivot.current,s=start.current;if(!p||!s)return;const updates:Record<string,Partial<Entity>>={};
+  if(tool==='rotate'){const q=p.quaternion.clone();
+   s.items.forEach(item=>{const position=center.clone().add(new THREE.Vector3(...item.position).sub(center).applyQuaternion(q));const base=new THREE.Quaternion().setFromEuler(new THREE.Euler(...item.rotation));const euler=new THREE.Euler().setFromQuaternion(q.clone().multiply(base));updates[item.id]={position:position.toArray() as Vec3,rotation:[euler.x,euler.y,euler.z]}});
+  }else if(tool==='scale'){const f=p.scale;
+   s.items.forEach(item=>{const position=center.clone().add(new THREE.Vector3(...item.position).sub(center).multiply(f));updates[item.id]={position:position.toArray() as Vec3,scale:[clampScale(item.scale[0]*f.x),clampScale(item.scale[1]*f.y),clampScale(item.scale[2]*f.z)]}});
+  }else{const offset=p.position.clone().sub(center);
+   s.items.forEach(item=>{updates[item.id]={position:[item.position[0]+offset.x,item.position[1]+offset.y,item.position[2]+offset.z] as Vec3}});
+  }
+  onChange(updates);
+ };
+ const finish=()=>{apply();onEnd()};
+ const object=pivot as unknown as RefObject<THREE.Object3D>;
+ return <><group ref={pivot}/><TransformControls object={object} mode={tool} size={.85} translationSnap={snap?gridSize:null} rotationSnap={snap?Math.PI/12:null} scaleSnap={snap?.1:null} onMouseDown={begin} onObjectChange={apply} onMouseUp={finish}/></>;
+}
 function World(props:Props){
- const {project,selected,placement}=props;const [point,setPoint]=useState<Vec3>([0,0,0]);const [hover,setHover]=useState(false);const s=project.settings;
+ const {project,selection,placement}=props;const [point,setPoint]=useState<Vec3>([0,0,0]);const [hover,setHover]=useState(false);const s=project.settings;
  const ambience=AMBIENCE[s.atmosphere]??AMBIENCE.day;
  const {gl,invalidate}=useThree();
  useEffect(()=>{gl.toneMappingExposure=ambience.exposure;invalidate()},[ambience,gl,invalidate]);
@@ -122,10 +143,11 @@ function World(props:Props){
  <directionalLight position={ambience.sunPosition} color={ambience.sunColor} intensity={ambience.sunIntensity} castShadow shadow-mapSize={[2048,2048]} shadow-camera-left={-s.size*.62} shadow-camera-right={s.size*.62} shadow-camera-top={s.size*.62} shadow-camera-bottom={-s.size*.62} shadow-camera-far={140} shadow-normalBias={.035} shadow-bias={-.0001}/>
  <HorizonRing size={s.size} color={mixColors(mixColors(ambience.ground,ambience.skyHorizon,.42),s.background,.22)}/>
  <mesh receiveShadow position={[0,-.26,0]}><boxGeometry args={[s.size,.5,s.size]}/><meshStandardMaterial color={ambience.groundDeep} roughness={1}/></mesh>
- <mesh receiveShadow rotation={[-Math.PI/2,0,0]} position={[0,.002,0]} onPointerMove={e=>{if(placement){setPoint(floorPoint(e));setHover(true)}}} onPointerOut={()=>setHover(false)} onClick={e=>{e.stopPropagation();if(e.delta<5){if(placement)props.onPlace(floorPoint(e));else props.onSelect(null)}}}><planeGeometry args={[s.size,s.size]}/><meshStandardMaterial map={groundTexture??undefined} roughness={1}/></mesh>
+ <mesh receiveShadow rotation={[-Math.PI/2,0,0]} position={[0,.002,0]} onPointerMove={e=>{if(placement){setPoint(floorPoint(e));setHover(true)}}} onPointerOut={()=>setHover(false)} onClick={e=>{e.stopPropagation();if(e.delta<5){if(placement)props.onPlace(floorPoint(e));else props.onSelect(null,false)}}}><planeGeometry args={[s.size,s.size]}/><meshStandardMaterial map={groundTexture??undefined} roughness={1}/></mesh>
  {s.grid&&<Grid args={[s.size,s.size]} position={[0,.01,0]} cellSize={s.gridSize} cellThickness={.5} cellColor={ambience.grid} sectionSize={s.gridSize*5} sectionThickness={1} sectionColor={ambience.gridSection} fadeDistance={100} fadeStrength={1} followCamera={false} infiniteGrid={false}/>}
  {project.objects.map(entity=><Placed key={entity.id} {...props} entity={entity}/>)}
  {placement&&hover&&<group position={point}><mesh position={[0,.04,0]} rotation={[-Math.PI/2,0,0]}><ringGeometry args={[.7,.8,32]}/><meshBasicMaterial color="#e4f7b8" transparent opacity={.9}/></mesh><mesh position={[0,.02,0]} rotation={[-Math.PI/2,0,0]}><planeGeometry args={[1.5,1.5]}/><meshBasicMaterial color="#c0e4a4" transparent opacity={.25} depthWrite={false}/></mesh></group>}
+ {selection.length>1&&props.tool!=='select'&&<GroupGizmo key={`${selection.join(',')}:${props.tool}`} entities={project.objects.filter(o=>selection.includes(o.id))} tool={props.tool} snap={s.snap} gridSize={s.gridSize} onChange={props.onGroupChange} onEnd={props.onGroupEnd}/>}
  <CameraRig project={project} command={props.command} onCamera={props.onCamera}/>
  </>;
 }

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {emptyProject,exampleProject,makeEntity,nudgeEntity,validateProject,KINDS} from './project';
+import {emptyProject,exampleProject,makeEntity,nudgeEntity,selectionCenter,toggleSelection,validateProject,KINDS} from './project';
 import {catalog} from '../assets/catalog';
 
 test('example survives a complete JSON export/import without losing transforms',()=>{
@@ -51,4 +51,13 @@ test('nudge desloca e gira sem mutar o objeto e respeita os limites',()=>{
  assert.deepEqual(entity.position,[0,0,0]);
  assert.deepEqual(nudgeEntity(entity,{rotate:Math.PI/12}).rotation,[0,Math.PI/12,0]);
  assert.deepEqual(nudgeEntity(makeEntity('cube','Cubo',[14,0,-14]),{x:10,z:-10},15).position,[15,0,-15]);
+});
+test('selection helpers toggle additively and average the group centre',()=>{
+ assert.deepEqual(toggleSelection([],'a',false),['a']);
+ assert.deepEqual(toggleSelection(['a'],'a',true),[]);
+ assert.deepEqual(toggleSelection(['a'],'b',true),['a','b']);
+ assert.deepEqual(toggleSelection(['a','b'],'b',false),['b']);
+ assert.deepEqual(selectionCenter([]),[0,0,0]);
+ const a=makeEntity('cube','A',[2,3,4]),b=makeEntity('cube','B',[4,1,0]);
+ assert.deepEqual(selectionCenter([a,b]),[3,2,2]);
 });

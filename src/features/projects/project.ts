@@ -18,6 +18,16 @@ export function nudgeEntity(entity:Entity, delta:{x?:number;y?:number;z?:number;
  return {...entity,position,rotation};
 }
 
+export function toggleSelection(ids:string[], id:string, additive:boolean):string[]{
+ if(!additive)return ids.length===1&&ids[0]===id?ids:[id];
+ return ids.includes(id)?ids.filter(x=>x!==id):[...ids,id];
+}
+export function selectionCenter(entities:Entity[]):Vec3{
+ if(!entities.length)return [0,0,0];
+ const sum=entities.reduce<Vec3>((acc,e)=>[acc[0]+e.position[0],acc[1]+e.position[1],acc[2]+e.position[2]],[0,0,0]);
+ return [sum[0]/entities.length,sum[1]/entities.length,sum[2]/entities.length];
+}
+
 export function emptyProject():Project {return {schemaVersion:1,id:uid(),name:'Meu novo mundo',updatedAt:new Date().toISOString(),objects:[],assets:[],settings:{size:30,gridSize:1,grid:true,snap:true,atmosphere:'day',background:'#202a28'}};}
 export function makeEntity(kind:Entity['kind'],name:string,position:Vec3=[0,0,0],assetId?:string):Entity {return {id:uid(),kind,name,position,rotation:[0,0,0],scale:[1,1,1],visible:true,locked:false,color:kind==='cube'?'#a7bf99':kind==='sphere'?'#d5b68c':'#9eafa9',...(assetId?{assetId}:{})};}
 function object(v:unknown):v is Record<string,unknown>{return typeof v==='object'&&v!==null&&!Array.isArray(v);}
