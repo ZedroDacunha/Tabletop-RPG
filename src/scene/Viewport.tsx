@@ -44,7 +44,7 @@ const AMBIENCE:Record<AtmosphereKey,Ambience>={
  dusk:{skyTop:'#3f4f6d',skyHorizon:'#e89a6b',glow:'#ffc08a',sunColor:'#ffb377',sunDisc:'#ffe0b8',sunIntensity:2,sunPosition:[-26,10,15],ambient:.7,hemiSky:'#b6c2d8',hemiGround:'#4a4a3b',hemi:.82,ground:'#69785c',groundDeep:'#39443b',grid:'#93a982',gridSection:'#a8bd94',fog:[66,158],exposure:1.03,stars:35},
  night:{skyTop:'#0b131c',skyHorizon:'#1d2a33',glow:'#31536b',sunColor:'#b9ccf5',sunDisc:'#dce7ff',sunIntensity:.85,sunPosition:[-18,23,-10],ambient:.36,hemiSky:'#5d7a9f',hemiGround:'#2f362b',hemi:.42,ground:'#3a4a3d',groundDeep:'#232c26',grid:'#6f8570',gridSection:'#819a82',fog:[48,135],exposure:1,stars:1},
 };
-function mixColors(base:string,tint:string,amount:number){return new THREE.Color(base).lerp(new THREE.Color(tint),amount).getHexString()}
+function mixColors(base:string,tint:string,amount:number){return '#'+new THREE.Color(base).lerp(new THREE.Color(tint),amount).getHexString()}
 function SkyDome({top,horizon,glow,radius=210}:{top:string;horizon:string;glow:string;radius?:number}){
  const geometry=useMemo(()=>{
   const g=new THREE.SphereGeometry(radius,32,20);const position=g.attributes.position;const colors=new Float32Array(position.count*3);
