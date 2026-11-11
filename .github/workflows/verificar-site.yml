@@ -30,14 +30,16 @@ jobs:
 
       - name: Preparar Chrome e servidor
         run: |
-          mkdir -p out
-          python3 -m http.server 8000 --directory dist &
+          mkdir -p out /tmp/serve
+          ln -sfn "$PWD/dist" /tmp/serve/Tabletop-RPG
+          python3 -m http.server 8000 --directory /tmp/serve &
           sleep 2
-          curl -s -o /dev/null -w 'servidor local: %{http_code}\n' http://127.0.0.1:8000/
+          curl -s -o /dev/null -w 'servidor local: %{http_code}\n' http://127.0.0.1:8000/Tabletop-RPG/
 
       - name: Capturar telas
         run: |
           export CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)"
+          export SITE_URL="http://127.0.0.1:8000/Tabletop-RPG/"
           echo "chrome: $CHROME_PATH"
           node scripts/verificar.mjs
           cat out/relatorio.txt
