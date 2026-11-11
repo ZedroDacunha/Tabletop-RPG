@@ -1,0 +1,30 @@
+import type {Project} from './project';
+
+export type ProjectDot={x:number;z:number;kind:string};
+export type ProjectSummary={
+ id:string;name:string;updatedAt:string;objects:number;size:number;
+ background:string;atmosphere:Project['settings']['atmosphere'];dots:ProjectDot[];
+};
+export const MAX_DOTS=150;
+
+export function summarise(project:Project):ProjectSummary{
+ const dots=project.objects.filter(o=>o.visible).slice(0,MAX_DOTS).map(o=>({x:Math.round(o.position[0]*100)/100,z:Math.round(o.position[2]*100)/100,kind:o.kind}));
+ return {id:project.id,name:project.name,updatedAt:project.updatedAt,objects:project.objects.length,size:project.settings.size,background:project.settings.background,atmosphere:project.settings.atmosphere,dots};
+}
+export function newestFirst(list:ProjectSummary[]):ProjectSummary[]{
+ return [...list].sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
+}
+export function timeAgo(iso:string,now=Date.now()):string{
+ const then=Date.parse(iso);
+ if(!Number.isFinite(then))return 'agora mesmo';
+ const minutes=Math.floor(Math.max(0,now-then)/60000);
+ if(minutes<1)return 'agora mesmo';
+ if(minutes<60)return `há ${minutes} min`;
+ const hours=Math.floor(minutes/60);
+ if(hours<24)return `há ${hours} h`;
+ const days=Math.floor(hours/24);
+ if(days===1)return 'ontem';
+ if(days<30)return `há ${days} dias`;
+ const date=new Date(then);
+ return `${String(date.getDate()).padStart(2,'0')}/${String(date.getMonth()+1).padStart(2,'0')}/${date.getFullYear()}`;
+}

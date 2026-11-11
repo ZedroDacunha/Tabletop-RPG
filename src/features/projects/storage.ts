@@ -1,6 +1,56 @@
 import {validateProject,type Project} from './project';
-const database=()=>new Promise<IDBDatabase>((resolve,reject)=>{const r=indexedDB.open('tabletop-rpg',1);r.onupgradeneeded=()=>r.result.createObjectStore('projects');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});
-export async function loadProject():Promise<Project|null>{const db=await database();try{return await new Promise((resolve,reject)=>{const r=db.transaction('projects').objectStore('projects').get('current');r.onsuccess=()=>{try{resolve(r.result?validateProject(r.result):null)}catch(e){reject(e)}};r.onerror=()=>reject(r.error);});}finally{db.close()}}
-export async function saveProject(p:Project):Promise<void>{const db=await database();try{await new Promise<void>((resolve,reject)=>{const tx=db.transaction('projects','readwrite');tx.objectStore('projects').put(p,'current');tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});}finally{db.close()}}
+import {newestFirst,summarise,type ProjectSummary} from './library';
+
+const DB='tabletop-rpg',VERSION=2,LEGACY_KEY='current';
+const database=()=>new Promise<IDBDatabase>((resolve,reject)=>{
+ const request=indexedDB.open(DB,VERSION);
+ request.onupgradeneeded=()=>{const db=request.result;for(const store of ['projects','index','meta'])if(!db.objectStoreNames.contains(store))db.createObjectStore(store);};
+ request.onsuccess=()=>resolve(request.result);
+ request.onerror=()=>reject(request.error);
+});
+function readKey<T>(db:IDBDatabase,store:string,key:IDBValidKey):Promise<T|undefined>{
+ return new Promise((resolve,reject)=>{const request=db.transaction(store,'readonly').objectStore(store).get(key);request.onsuccess=()=>resolve(request.result as T|undefined);request.onerror=()=>reject(request.error);});
+}
+function write(db:IDBDatabase,stores:string[],run:(tx:IDBTransaction)=>void):Promise<void>{
+ return new Promise((resolve,reject)=>{const tx=db.transaction(stores,'readwrite');try{run(tx)}catch(e){reject(e);return}tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});
+}
+export async function listProjects():Promise<ProjectSummary[]>{
+ const db=await database();
+ try{
+  const summaries=await new Promise<ProjectSummary[]>((resolve,reject)=>{const request=db.transaction('index','readonly').objectStore('index').getAll();request.onsuccess=()=>resolve((request.result??[]) as ProjectSummary[]);request.onerror=()=>reject(request.error);});
+  return newestFirst(summaries.filter(s=>s&&typeof s.id==='string'));
+ }finally{db.close()}
+}
+export async function loadProject(id?:string):Promise<Project|null>{
+ const db=await database();
+ try{
+  const stored=id??await readKey<string>(db,'meta','last');
+  const raw=stored?await readKey<unknown>(db,'projects',stored):undefined;
+  if(raw!==undefined)return validateProject(raw);
+  const legacy=await readKey<unknown>(db,'projects',LEGACY_KEY);
+  if(legacy===undefined)return null;
+  const project=validateProject(legacy);
+  await write(db,['projects'],tx=>tx.objectStore('projects').delete(LEGACY_KEY));
+  await saveProject(project);
+  return project;
+ }finally{db.close()}
+}
+export async function saveProject(project:Project):Promise<void>{
+ const db=await database();
+ try{
+  await write(db,['projects','index','meta'],tx=>{tx.objectStore('projects').put(project,project.id);tx.objectStore('index').put(summarise(project),project.id);tx.objectStore('meta').put(project.id,'last');});
+ }finally{db.close()}
+}
+export async function deleteProject(id:string):Promise<void>{
+ const db=await database();
+ try{
+  await write(db,['projects','index','meta'],tx=>{tx.objectStore('projects').delete(id);tx.objectStore('index').delete(id);});
+  const last=await readKey<string>(db,'meta','last');
+  if(last===id){
+   const rest=await listProjects();
+   await write(db,['meta'],tx=>{if(rest.length)tx.objectStore('meta').put(rest[0].id,'last');else tx.objectStore('meta').delete('last')});
+  }
+ }finally{db.close()}
+}
 export function downloadFile(data:Blob,name:string){const url=URL.createObjectURL(data);const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);}
 export function exportProject(p:Project){downloadFile(new Blob([JSON.stringify(p)],{type:'application/json'}),`${p.name.replace(/[^\p{L}\p{N}_-]/gu,'_')||'mapa'}.tabletop`);}
