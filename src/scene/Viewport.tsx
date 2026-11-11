@@ -8,7 +8,7 @@ import {alignToNeighbours,nearestNeighbour,selectionCenter,type Project,type Ent
 import {CompatibleMap} from './CompatibleMap';
 import {downloadFile} from '../features/projects/storage';
 export type Tool='select'|'translate'|'rotate'|'scale';
-export type CameraCommand={id:number;type:'home'|'top'|'focus'|'image';position?:Vec3};
+export type CameraCommand={id:number;type:'home'|'top'|'focus'|'image'|'view';position?:Vec3;target?:Vec3};
 export type Placement={kind:Entity['kind'];name:string;assetId?:string}|null;
 export type ViewportProps={project:Project;selection:string[];tool:Tool;placement:Placement;command:CameraCommand;onSelect:(id:string|null,additive?:boolean)=>void;onPlace:(p:Vec3)=>void;onTransform:(id:string,patch:Partial<Entity>)=>void;onGroupChange:(updates:Record<string,Partial<Entity>>)=>void;onGroupEnd:()=>void;onCamera:(camera:NonNullable<Project['camera']>)=>void;onError:(msg:string)=>void};
 type Props=ViewportProps;
@@ -18,6 +18,7 @@ function CameraRig({project,command,onCamera}:Pick<Props,'project'|'command'|'on
  const remember=()=>{if(controls.current)onCameraRef.current({position:camera.position.toArray() as Vec3,target:controls.current.target.toArray() as Vec3})};
  useEffect(()=>{const c=controls.current;if(!c)return;camera.position.fromArray(project.camera?.position??[23,20,27]);c.target.fromArray(project.camera?.target??[0,0,0]);c.update();invalidate()},[project.id]);
  useEffect(()=>{const c=controls.current;if(!c||command.id===0)return;
+ if(command.type==='view'&&command.position&&command.target){camera.position.fromArray(command.position);c.target.fromArray(command.target);c.update();invalidate();return;}
  if(command.type==='image'){gl.render(scene,camera);gl.domElement.toBlob(blob=>{if(blob)downloadFile(blob,`${project.name}.png`)});return;}
  const target=command.type==='focus'&&command.position?new THREE.Vector3(...command.position):new THREE.Vector3(0,0,0);c.target.copy(target);
  if(command.type==='top')camera.position.copy(target).add(new THREE.Vector3(.001,project.settings.size*1.3,.001));

@@ -78,3 +78,15 @@
 .trecho-button span{display:flex;flex-direction:column;gap:1px}
 .trecho-button small{font-size:7.5px;color:#7f9573}
 .trecho-button:hover{border-color:#6e8857;color:#d7edb8}
+
+/* Roteiro de apresentação */
+.view-list{display:flex;flex-direction:column;gap:4px;margin:8px 0 8px}
+.view-row{display:flex;align-items:center;gap:4px}
+.view-index{width:16px;flex-shrink:0;font-size:8px;color:#8ea582;text-align:center}
+.view-row input{flex:1;min-width:0;padding:6px 8px;border:1px solid #3d5033;border-radius:5px;background:#22301f;color:#cbddb7;font-size:10px}
+.view-row input:focus{outline:none;border-color:#7d9a63}
+.showcase-views{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);display:flex;align-items:center;gap:10px;padding:7px 10px;border:1px solid #56684a;border-radius:22px;background:#182318cc;backdrop-filter:blur(8px);z-index:6;color:#dcecc6;font-size:10px}
+.showcase-views span{font-family:'Manrope',sans-serif;font-size:11px;font-weight:550;min-width:70px;text-align:center}
+.showcase-views small{color:#9db590;font-size:8px}
+.showcase-views button{width:22px;height:22px;border-radius:50%;border:1px solid #56684a;color:#dcecc6;font-size:12px;line-height:1;display:flex;align-items:center;justify-content:center}
+.showcase-views button:hover{background:#31452c}
