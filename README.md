@@ -17,6 +17,19 @@ npm run build
 npm run preview
 ```
 
+## Atualização automática
+
+**Enquanto você programa:** rode `npm run dev` e abra o endereço mostrado no terminal (por padrão http://localhost:5173). O Vite observa a pasta `src/` e aplica cada mudança na hora, sem precisar parar o servidor nem recarregar a página à mão. O servidor escuta em `0.0.0.0`, então também funciona pela prévia remota.
+
+**Site publicado:** o workflow `.github/workflows/publicar.yml` compila e publica o site automaticamente a cada `push` na branch `main`, em https://zedrodacunha.github.io/Tabletop-RPG/. O caminho base (`/Tabletop-RPG/`) é calculado sozinho no GitHub Actions; localmente o site continua na raiz. Para publicar de novo manualmente, use a aba **Actions → Publicar site → Run workflow**.
+
+```sh
+npm run dev     # desenvolvimento com recarga automática
+git push        # publica o site atualizado (na main)
+```
+
+O build publicado leva de 1 a 2 minutos para aparecer no ar. O GitHub Pages precisa estar configurado com **Source: GitHub Actions** (Settings → Pages).
+
 ## O que funciona
 
 - Cena vazia ou cenário de exemplo com 40 objetos.
