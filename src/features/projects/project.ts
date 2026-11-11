@@ -6,10 +6,25 @@ export const KINDS = [
  'cube','sphere','cylinder',
 ] as const;
 export type Kind = typeof KINDS[number];
-export type Entity = { id:string; kind:Kind|'model'; assetId?:string; name:string; position:Vec3; rotation:Vec3; scale:Vec3; visible:boolean; locked:boolean; color:string };
+export type Group = { id:string; name:string };
+export type Entity = { id:string; kind:Kind|'model'; assetId?:string; groupId?:string; name:string; position:Vec3; rotation:Vec3; scale:Vec3; visible:boolean; locked:boolean; color:string };
 export type Asset = { id:string; name:string; data:string; bytes:number };
-export type Project = { schemaVersion:1; id:string; name:string; updatedAt:string; objects:Entity[]; assets:Asset[]; settings:{ size:number; gridSize:number; grid:boolean; snap:boolean; atmosphere:'dawn'|'day'|'dusk'|'night'; background:string }; camera?:{position:Vec3;target:Vec3} };
+export type Project = { schemaVersion:1; id:string; name:string; updatedAt:string; objects:Entity[]; assets:Asset[]; groups?:Group[]; settings:{ size:number; gridSize:number; grid:boolean; snap:boolean; atmosphere:'dawn'|'day'|'dusk'|'night'; background:string }; camera?:{position:Vec3;target:Vec3} };
 export const uid = () => crypto.randomUUID();
+export const GROUP_NAME_MAX=60;
+export function makeGroup(name:string):Group{return {id:uid(),name:name.trim().slice(0,GROUP_NAME_MAX)||'Grupo'};}
+export function assignGroup(objects:Entity[], ids:ReadonlySet<string>, groupId?:string):Entity[]{
+ return objects.map(o=>{if(!ids.has(o.id))return o;const {groupId:_,...rest}=o;return groupId?{...rest,groupId}:rest});
+}
+export function pruneGroups(groups:Group[]|undefined, objects:Entity[]):Group[]|undefined{
+ if(!groups?.length)return undefined;
+ const used=new Set(objects.map(o=>o.groupId).filter((id):id is string=>Boolean(id)));
+ const kept=groups.filter(g=>used.has(g.id));
+ return kept.length?kept:undefined;
+}
+export function withGroups(project:Project, groups:Group[]|undefined):Project{
+ const {groups:_,...rest}=project;return groups?.length?{...rest,groups}:rest;
+}
 export const MAX_PROJECT_BYTES=100*1024*1024;
 export function nudgeEntity(entity:Entity, delta:{x?:number;y?:number;z?:number;rotate?:number}, limit=5000):Entity{
  const clamp=(value:number)=>Math.max(-limit,Math.min(limit,value));
@@ -40,11 +55,15 @@ export function validateProject(raw:unknown):Project {
  if(!Array.isArray(raw.objects)||raw.objects.length>1500||!Array.isArray(raw.assets)||raw.assets.length>80)return fail('O projeto excede o limite de 1.500 objetos ou 80 modelos.');
  const assets:Asset[]=raw.assets.map(a=>{if(!object(a)||typeof a.id!=='string'||typeof a.name!=='string'||a.name.length>120||typeof a.data!=='string'||!/^data:model\/gltf-binary;base64,[A-Za-z0-9+/]+=*$/.test(a.data)||a.data.length>45*1024*1024||typeof a.bytes!=='number'||!Number.isFinite(a.bytes)||a.bytes<0) return fail('Um modelo do projeto está inválido.');return a as Asset;});
  const assetIds=new Set(assets.map(a=>a.id));if(assetIds.size!==assets.length)return fail('O projeto contém modelos com identificadores repetidos.');
- const objects:Entity[]=raw.objects.map(o=>{if(!object(o)||typeof o.id!=='string'||typeof o.name!=='string'||o.name.length>120||!((KINDS as readonly unknown[]).includes(o.kind)||o.kind==='model')||!vector(o.position)||!vector(o.rotation)||!vector(o.scale,true)||typeof o.visible!=='boolean'||typeof o.locked!=='boolean'||!color(o.color))return fail('Um objeto tem propriedades inválidas.');if(o.kind==='model'&&(typeof o.assetId!=='string'||!assetIds.has(o.assetId)))return fail('O projeto está incompleto: falta o arquivo de um modelo 3D.');return o as Entity;});
+ let groups:Group[]|undefined;
+ if(raw.groups!==undefined){if(!Array.isArray(raw.groups)||raw.groups.length>200)return fail('Os grupos do mapa são inválidos.');groups=raw.groups.map(g=>{if(!object(g)||typeof g.id!=='string'||!g.id||typeof g.name!=='string'||!g.name.trim()||g.name.length>GROUP_NAME_MAX)return fail('Um grupo do mapa tem propriedades inválidas.');return {id:g.id,name:g.name}});if(new Set(groups.map(g=>g.id)).size!==groups.length)return fail('O projeto contém grupos com identificadores repetidos.')}
+ let objects:Entity[]=raw.objects.map(o=>{if(!object(o)||typeof o.id!=='string'||typeof o.name!=='string'||o.name.length>120||!((KINDS as readonly unknown[]).includes(o.kind)||o.kind==='model')||!vector(o.position)||!vector(o.rotation)||!vector(o.scale,true)||(o.groupId!==undefined&&typeof o.groupId!=='string')||typeof o.visible!=='boolean'||typeof o.locked!=='boolean'||!color(o.color))return fail('Um objeto tem propriedades inválidas.');if(o.kind==='model'&&(typeof o.assetId!=='string'||!assetIds.has(o.assetId)))return fail('O projeto está incompleto: falta o arquivo de um modelo 3D.');return o as Entity;});
  if(new Set(objects.map(o=>o.id)).size!==objects.length)return fail('O projeto contém objetos com identificadores repetidos.');
+ if(groups){const known=new Set(groups.map(g=>g.id));objects=objects.map(o=>{const {groupId,...rest}=o;return groupId&&known.has(groupId)?{groupId,...rest}:rest})}
+ else objects=objects.map(o=>{const {groupId,...rest}=o;return rest});
  const s=raw.settings;if(!object(s)||!Number.isFinite(s.size)||Number(s.size)<10||Number(s.size)>100||!Number.isFinite(s.gridSize)||Number(s.gridSize)<0.25||Number(s.gridSize)>5||typeof s.grid!=='boolean'||typeof s.snap!=='boolean'||!['dawn','day','dusk','night'].includes(String(s.atmosphere))||!color(s.background))return fail('As configurações do mapa são inválidas.');
  const camera=raw.camera;if(camera!==undefined&&(!object(camera)||!vector(camera.position)||!vector(camera.target)))return fail('A posição da câmera é inválida.');
- return {schemaVersion:1,id:raw.id,name:raw.name,updatedAt:typeof raw.updatedAt==='string'?raw.updatedAt:new Date().toISOString(),objects,assets,settings:s as Project['settings'],...(camera?{camera:camera as Project['camera']}:{})};
+ return {schemaVersion:1,id:raw.id,name:raw.name,updatedAt:typeof raw.updatedAt==='string'?raw.updatedAt:new Date().toISOString(),objects,assets,settings:s as Project['settings'],...(groups?{groups}:{}),...(camera?{camera:camera as Project['camera']}:{})};
 }
 export function exampleProject():Project{
  const p=emptyProject();p.name='Acampamento nas ruínas';p.settings.grid=false;p.settings.atmosphere='dusk';
