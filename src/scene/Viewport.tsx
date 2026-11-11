@@ -37,12 +37,12 @@ function Placed({entity,project,selected,tool,onSelect,onTransform,onError}:Omit
  return edit?<TransformControls mode={tool} translationSnap={project.settings.snap?project.settings.gridSize:null} rotationSnap={project.settings.snap?Math.PI/12:null} scaleSnap={project.settings.snap ? .1 : null} onMouseUp={capture}>{model}</TransformControls>:model;
 }
 type AtmosphereKey='dawn'|'day'|'dusk'|'night';
-type Ambience={skyTop:string;skyHorizon:string;glow:string;sunColor:string;sunDisc:string;sunIntensity:number;sunPosition:[number,number,number];ambient:number;hemiSky:string;hemiGround:string;hemi:number;ground:string;groundDeep:string;grid:string;gridSection:string;fog:[number,number];exposure:number;stars:number};
+type Ambience={fogTint:number;skyTop:string;skyHorizon:string;glow:string;sunColor:string;sunDisc:string;sunIntensity:number;sunPosition:[number,number,number];ambient:number;hemiSky:string;hemiGround:string;hemi:number;ground:string;groundDeep:string;grid:string;gridSection:string;fog:[number,number];exposure:number;stars:number};
 const AMBIENCE:Record<AtmosphereKey,Ambience>={
- dawn:{skyTop:'#6a7fa8',skyHorizon:'#f3c3a1',glow:'#ffd9b8',sunColor:'#ffcfaa',sunDisc:'#fff0d8',sunIntensity:2.2,sunPosition:[-24,7,18],ambient:.62,hemiSky:'#cbd8ea',hemiGround:'#5b584a',hemi:.78,ground:'#6d7c60',groundDeep:'#3a473c',grid:'#9db48c',gridSection:'#b4c7a0',fog:[62,160],exposure:1.02,stars:45},
- day:{skyTop:'#5f95c9',skyHorizon:'#cfe0e8',glow:'#f7f3e0',sunColor:'#fff2d6',sunDisc:'#fffaf0',sunIntensity:2.5,sunPosition:[-16,27,13],ambient:.78,hemiSky:'#d9e6dd',hemiGround:'#4f5844',hemi:1.02,ground:'#6f8557',groundDeep:'#45543c',grid:'#9db48c',gridSection:'#b1c79c',fog:[70,180],exposure:1,stars:0},
- dusk:{skyTop:'#3a4a68',skyHorizon:'#e08e5f',glow:'#ffc08a',sunColor:'#ffb377',sunDisc:'#ffe0b8',sunIntensity:2,sunPosition:[-26,10,15],ambient:.7,hemiSky:'#b6c2d8',hemiGround:'#4a4a3b',hemi:.82,ground:'#69785c',groundDeep:'#39443b',grid:'#93a982',gridSection:'#a8bd94',fog:[66,158],exposure:1.03,stars:35},
- night:{skyTop:'#0b131c',skyHorizon:'#1d2a33',glow:'#31536b',sunColor:'#b9ccf5',sunDisc:'#dce7ff',sunIntensity:.85,sunPosition:[-18,23,-10],ambient:.36,hemiSky:'#5d7a9f',hemiGround:'#2f362b',hemi:.42,ground:'#3a4a3d',groundDeep:'#232c26',grid:'#6f8570',gridSection:'#819a82',fog:[48,135],exposure:1,stars:1},
+ dawn:{fogTint:.55,skyTop:'#7f8fb5',skyHorizon:'#f4c3bd',glow:'#ffd9cf',sunColor:'#ffd0b8',sunDisc:'#fff0e2',sunIntensity:2.1,sunPosition:[-24,7,18],ambient:.64,hemiSky:'#cfd8ea',hemiGround:'#5b584a',hemi:.78,ground:'#6d7c60',groundDeep:'#3a473c',grid:'#9db48c',gridSection:'#b4c7a0',fog:[44,145],exposure:1.03,stars:18},
+ day:{fogTint:.35,skyTop:'#5f95c9',skyHorizon:'#cfe0e8',glow:'#f7f3e0',sunColor:'#fff2d6',sunDisc:'#fffaf0',sunIntensity:2.5,sunPosition:[-16,27,13],ambient:.78,hemiSky:'#d9e6dd',hemiGround:'#4f5844',hemi:1.02,ground:'#6f8557',groundDeep:'#45543c',grid:'#9db48c',gridSection:'#b1c79c',fog:[70,180],exposure:1,stars:0},
+ dusk:{fogTint:.26,skyTop:'#3a4a68',skyHorizon:'#e08e5f',glow:'#ffc08a',sunColor:'#ffb377',sunDisc:'#ffe0b8',sunIntensity:2,sunPosition:[-26,10,15],ambient:.7,hemiSky:'#b6c2d8',hemiGround:'#4a4a3b',hemi:.82,ground:'#69785c',groundDeep:'#39443b',grid:'#93a982',gridSection:'#a8bd94',fog:[66,158],exposure:1.03,stars:35},
+ night:{fogTint:.08,skyTop:'#0b131c',skyHorizon:'#1d2a33',glow:'#31536b',sunColor:'#b9ccf5',sunDisc:'#dce7ff',sunIntensity:.85,sunPosition:[-18,23,-10],ambient:.36,hemiSky:'#5d7a9f',hemiGround:'#2f362b',hemi:.42,ground:'#3a4a3d',groundDeep:'#232c26',grid:'#6f8570',gridSection:'#819a82',fog:[48,135],exposure:1,stars:1},
 };
 function mixColors(base:string,tint:string,amount:number){return '#'+new THREE.Color(base).lerp(new THREE.Color(tint),amount).getHexString()}
 function SkyDome({top,horizon,glow,deep,radius=210}:{top:string;horizon:string;glow:string;deep:string;radius?:number}){
@@ -109,11 +109,12 @@ function World(props:Props){
  const ambience=AMBIENCE[s.atmosphere]??AMBIENCE.day;
  const {gl,invalidate}=useThree();
  useEffect(()=>{gl.toneMappingExposure=ambience.exposure;invalidate()},[ambience,gl,invalidate]);
+ const fogColor=useMemo(()=>mixColors(s.background,ambience.skyHorizon,ambience.fogTint),[ambience,s.background]);
  const sky=useMemo(()=>({top:mixColors(ambience.skyTop,s.background,.1),horizon:mixColors(ambience.skyHorizon,s.background,.26),glow:mixColors(ambience.glow,s.background,.1),deep:mixColors(s.background,'#050a08',.45)}),[ambience,s.background]);
  const groundTexture=useGroundTexture(ambience.ground,Math.max(6,Math.round(s.size/3)));
  function floorPoint(e:ThreeEvent<PointerEvent|MouseEvent>):Vec3{let x=e.point.x,z=e.point.z;if(s.snap){x=Math.round(x/s.gridSize)*s.gridSize;z=Math.round(z/s.gridSize)*s.gridSize;}const limit=s.size/2;return [Math.max(-limit,Math.min(limit,x)),0,Math.max(-limit,Math.min(limit,z))];}
  return <>
- <color attach="background" args={[s.background]}/><fog attach="fog" args={[s.background,ambience.fog[0],ambience.fog[1]]}/>
+ <color attach="background" args={[s.background]}/><fog attach="fog" args={[fogColor,ambience.fog[0],ambience.fog[1]]}/>
  <SkyDome top={sky.top} horizon={sky.horizon} glow={sky.glow} deep={sky.deep}/>
  <CelestialBody direction={ambience.sunPosition} color={ambience.sunDisc}/>
  {ambience.stars>0&&<Stars count={ambience.stars}/>}
