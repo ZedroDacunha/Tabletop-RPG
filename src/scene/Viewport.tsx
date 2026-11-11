@@ -1,6 +1,6 @@
 import {Component,useEffect,useMemo,useRef,useState,Suspense,type ReactNode,type RefObject} from 'react';
 import {Canvas,useThree,type ThreeEvent} from '@react-three/fiber';
-import {Grid,Line,OrbitControls,TransformControls} from '@react-three/drei';
+import {Grid,OrbitControls,TransformControls} from '@react-three/drei';
 import type {OrbitControls as Controls} from 'three-stdlib';
 import * as THREE from 'three';
 import {BuiltinModel,ImportedModel} from './Models';
@@ -104,6 +104,16 @@ function HorizonRing({size,color}:{size:number;color:string}){
  },[size]);
  return <group>{hills.map((hill,index)=><mesh key={index} position={[hill.x,-.2,hill.z]} rotation={[0,hill.rot,0]} scale={[hill.w,hill.h,hill.w]}><sphereGeometry args={[1,8,4,0,Math.PI*2,0,Math.PI/2]}/><meshStandardMaterial color={color} roughness={1} flatShading/></mesh>)}</group>;
 }
+function RulerLine({from,to}:{from:Vec3;to:Vec3}){
+ const object=useMemo(()=>{
+  const geometry=new THREE.BufferGeometry();
+  geometry.setAttribute('position',new THREE.Float32BufferAttribute([from[0],from[1]+.06,from[2],to[0],to[1]+.06,to[2]],3));
+  const material=new THREE.LineDashedMaterial({color:'#f4ffdd',dashSize:.34,gapSize:.22,transparent:true,opacity:.9});
+  const line=new THREE.Line(geometry,material);line.computeLineDistances();return line;
+ },[from[0],from[1],from[2],to[0],to[1],to[2]]);
+ useEffect(()=>()=>{object.geometry.dispose();(object.material as THREE.Material).dispose()},[object]);
+ return <primitive object={object}/>;
+}
 const clampScale=(value:number)=>Math.max(.05,Math.min(50,value));
 function GroupGizmo({entities,tool,snap,gridSize,onChange,onEnd}:{entities:Entity[];tool:Exclude<Tool,'select'>;snap:boolean;gridSize:number;onChange:(updates:Record<string,Partial<Entity>>)=>void;onEnd:()=>void}){
  const pivot=useRef<THREE.Group>(null);
@@ -148,7 +158,7 @@ function World(props:Props){
  <mesh receiveShadow rotation={[-Math.PI/2,0,0]} position={[0,.002,0]} onPointerMove={e=>{if(placement){setPoint(floorPoint(e));setHover(true)}}} onPointerOut={()=>setHover(false)} onClick={e=>{e.stopPropagation();if(e.delta<5){if(placement)props.onPlace(floorPoint(e));else props.onSelect(null,false)}}}><planeGeometry args={[s.size,s.size]}/><meshStandardMaterial map={groundTexture??undefined} roughness={1}/></mesh>
  {s.grid&&<Grid args={[s.size,s.size]} position={[0,.01,0]} cellSize={s.gridSize} cellThickness={.5} cellColor={ambience.grid} sectionSize={s.gridSize*5} sectionThickness={1} sectionColor={ambience.gridSection} fadeDistance={100} fadeStrength={1} followCamera={false} infiniteGrid={false}/>}
  {project.objects.map(entity=><Placed key={entity.id} {...props} entity={entity}/>)}
- {guided&&neighbour&&<Line points={[guided.position,neighbour.entity.position].map(p=>[p[0],p[1]+.06,p[2]] as [number,number,number])} color="#f4ffdd" lineWidth={1.6} dashed dashSize={.34} gapSize={.22} transparent opacity={.9}/>}
+ {guided&&neighbour&&<RulerLine from={guided.position} to={neighbour.entity.position}/>}
  {placement&&hover&&<group position={point}><mesh position={[0,.04,0]} rotation={[-Math.PI/2,0,0]}><ringGeometry args={[.7,.8,32]}/><meshBasicMaterial color="#e4f7b8" transparent opacity={.9}/></mesh><mesh position={[0,.02,0]} rotation={[-Math.PI/2,0,0]}><planeGeometry args={[1.5,1.5]}/><meshBasicMaterial color="#c0e4a4" transparent opacity={.25} depthWrite={false}/></mesh></group>}
  {selection.length>1&&props.tool!=='select'&&<GroupGizmo key={`${selection.join(',')}:${props.tool}`} entities={project.objects.filter(o=>selection.includes(o.id))} tool={props.tool} snap={s.snap} gridSize={s.gridSize} onChange={props.onGroupChange} onEnd={props.onGroupEnd}/>}
  <CameraRig project={project} command={props.command} onCamera={props.onCamera}/>

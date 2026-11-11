@@ -69,6 +69,14 @@ try{
  const after=num('input[aria-label="Posição X"]');
  ok('mover com a seta muda a distância medida',after===before+1,`X ${before} → ${after}`);
  ok('leitura continua presente depois de mover',Boolean(document.querySelector('.ruler-readout')));
+
+ const THREE=await import('three');
+ const geometry=new THREE.BufferGeometry();
+ geometry.setAttribute('position',new THREE.Float32BufferAttribute([0,.06,0,4.2,.06,1],3));
+ const dashed=new THREE.Line(geometry,new THREE.LineDashedMaterial({color:'#f4ffdd',dashSize:.34,gapSize:.22,transparent:true,opacity:.9}));
+ dashed.computeLineDistances();
+ const distances=geometry.getAttribute('lineDistance');
+ ok('linha tracejada da régua monta com as três primitivas',Boolean(distances)&&Math.abs(distances.getX(1)-Math.hypot(4.2,0,1))<1e-6,`comprimento ${distances?.getX(1).toFixed(2)} m`);
 }catch(e){
  results.push(`FALHOU — exceção: ${e instanceof Error?e.stack?.split('\n').slice(0,3).join(' | '):String(e)}`);failures++;
 }
