@@ -53,6 +53,8 @@ O build publicado leva de 1 a 2 minutos para aparecer no ar. O GitHub Pages prec
 | Zoom | Scroll |
 | Selecionar / mover / girar / escalar | 1 / 2 / 3 / 4 |
 | Focar objeto | F |
+| Mover com o teclado | ← ↑ → ↓ (Alt = passo fino) |
+| Girar 15° / subir e descer | Shift + ← → / Page Up · Page Down |
 | Duplicar | Ctrl/Cmd + D |
 | Desfazer / refazer | Ctrl/Cmd + Z / Shift + Z |
 | Salvar | Ctrl/Cmd + S |

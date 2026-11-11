@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {emptyProject,exampleProject,makeEntity,validateProject,KINDS} from './project';
+import {emptyProject,exampleProject,makeEntity,nudgeEntity,validateProject,KINDS} from './project';
 import {catalog} from '../assets/catalog';
 
 test('example survives a complete JSON export/import without losing transforms',()=>{
@@ -42,4 +42,13 @@ test('as quatro atmosferas são aceitas na validação',()=>{
   const p=emptyProject();p.settings.atmosphere=atmosphere;
   assert.equal(validateProject(JSON.parse(JSON.stringify(p))).settings.atmosphere,atmosphere);
  }
+});
+
+test('nudge desloca e gira sem mutar o objeto e respeita os limites',()=>{
+ const entity=makeEntity('cube','Cubo',[0,0,0]);
+ const moved=nudgeEntity(entity,{x:2,z:-3});
+ assert.deepEqual(moved.position,[2,0,-3]);
+ assert.deepEqual(entity.position,[0,0,0]);
+ assert.deepEqual(nudgeEntity(entity,{rotate:Math.PI/12}).rotation,[0,Math.PI/12,0]);
+ assert.deepEqual(nudgeEntity(makeEntity('cube','Cubo',[14,0,-14]),{x:10,z:-10},15).position,[15,0,-15]);
 });

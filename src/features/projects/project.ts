@@ -11,6 +11,13 @@ export type Asset = { id:string; name:string; data:string; bytes:number };
 export type Project = { schemaVersion:1; id:string; name:string; updatedAt:string; objects:Entity[]; assets:Asset[]; settings:{ size:number; gridSize:number; grid:boolean; snap:boolean; atmosphere:'dawn'|'day'|'dusk'|'night'; background:string }; camera?:{position:Vec3;target:Vec3} };
 export const uid = () => crypto.randomUUID();
 export const MAX_PROJECT_BYTES=100*1024*1024;
+export function nudgeEntity(entity:Entity, delta:{x?:number;y?:number;z?:number;rotate?:number}, limit=5000):Entity{
+ const clamp=(value:number)=>Math.max(-limit,Math.min(limit,value));
+ const position:Vec3=[clamp(entity.position[0]+(delta.x??0)),clamp(entity.position[1]+(delta.y??0)),clamp(entity.position[2]+(delta.z??0))];
+ const rotation:Vec3=[entity.rotation[0],entity.rotation[1]+(delta.rotate??0),entity.rotation[2]];
+ return {...entity,position,rotation};
+}
+
 export function emptyProject():Project {return {schemaVersion:1,id:uid(),name:'Meu novo mundo',updatedAt:new Date().toISOString(),objects:[],assets:[],settings:{size:30,gridSize:1,grid:true,snap:true,atmosphere:'day',background:'#202a28'}};}
 export function makeEntity(kind:Entity['kind'],name:string,position:Vec3=[0,0,0],assetId?:string):Entity {return {id:uid(),kind,name,position,rotation:[0,0,0],scale:[1,1,1],visible:true,locked:false,color:kind==='cube'?'#a7bf99':kind==='sphere'?'#d5b68c':'#9eafa9',...(assetId?{assetId}:{})};}
 function object(v:unknown):v is Record<string,unknown>{return typeof v==='object'&&v!==null&&!Array.isArray(v);}
