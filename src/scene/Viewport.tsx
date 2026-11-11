@@ -32,9 +32,9 @@ function Placed({entity,project,selected,tool,onSelect,onTransform,onError}:Omit
  const capture=()=>{const o=ref.current;if(o)onTransform(entity.id,{position:o.position.toArray() as Vec3,rotation:[o.rotation.x,o.rotation.y,o.rotation.z],scale:o.scale.toArray().map(s=>Math.max(.05,Math.min(50,s))) as Vec3})};
  const model=<group ref={ref} name={entity.id} position={entity.position} rotation={entity.rotation} scale={entity.scale} visible={entity.visible} onClick={(e:ThreeEvent<MouseEvent>)=>{e.stopPropagation();if(e.delta<5)onSelect(entity.id)}}>
  {entity.kind==='model'&&asset?<ImportedModel asset={asset} onError={onError}/>:entity.kind!=='model'?<BuiltinModel kind={entity.kind} color={entity.color}/>:null}
- {active&&<mesh rotation={[-Math.PI/2,0,0]} position={[0,.015,0]}><ringGeometry args={[1.45,1.49,64]}/><meshBasicMaterial color="#d1edb2" transparent opacity={.85} depthWrite={false}/></mesh>}
+ {active&&<mesh rotation={[-Math.PI/2,0,0]} position={[0,.015,0]} scale={[1/Math.max(.05,entity.scale[0]),1/Math.max(.05,entity.scale[2]),1]}><ringGeometry args={[1.45,1.49,64]}/><meshBasicMaterial color="#d1edb2" transparent opacity={.85} depthWrite={false}/></mesh>}
  </group>;
- return <>{model}{edit&&<TransformControls object={ref as unknown as RefObject<THREE.Object3D>} mode={tool} translationSnap={project.settings.snap?project.settings.gridSize:null} rotationSnap={project.settings.snap?Math.PI/12:null} scaleSnap={project.settings.snap ? .1 : null} onMouseUp={capture}/>}</>;
+ return <>{model}{edit&&<TransformControls object={ref as unknown as RefObject<THREE.Object3D>} mode={tool} size={.85} translationSnap={project.settings.snap?project.settings.gridSize:null} rotationSnap={project.settings.snap?Math.PI/12:null} scaleSnap={project.settings.snap ? .1 : null} onMouseUp={capture}/>}</>;
 }
 type AtmosphereKey='dawn'|'day'|'dusk'|'night';
 type Ambience={fogTint:number;skyTop:string;skyHorizon:string;glow:string;sunColor:string;sunDisc:string;sunIntensity:number;sunPosition:[number,number,number];ambient:number;hemiSky:string;hemiGround:string;hemi:number;ground:string;groundDeep:string;grid:string;gridSection:string;fog:[number,number];exposure:number;stars:number};
