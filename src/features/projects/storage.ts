@@ -1,0 +1,6 @@
+import {validateProject,type Project} from './project';
+const database=()=>new Promise<IDBDatabase>((resolve,reject)=>{const r=indexedDB.open('tabletop-rpg',1);r.onupgradeneeded=()=>r.result.createObjectStore('projects');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});
+export async function loadProject():Promise<Project|null>{const db=await database();try{return await new Promise((resolve,reject)=>{const r=db.transaction('projects').objectStore('projects').get('current');r.onsuccess=()=>{try{resolve(r.result?validateProject(r.result):null)}catch(e){reject(e)}};r.onerror=()=>reject(r.error);});}finally{db.close()}}
+export async function saveProject(p:Project):Promise<void>{const db=await database();try{await new Promise<void>((resolve,reject)=>{const tx=db.transaction('projects','readwrite');tx.objectStore('projects').put(p,'current');tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});}finally{db.close()}}
+export function downloadFile(data:Blob,name:string){const url=URL.createObjectURL(data);const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);}
+export function exportProject(p:Project){downloadFile(new Blob([JSON.stringify(p)],{type:'application/json'}),`${p.name.replace(/[^\p{L}\p{N}_-]/gu,'_')||'mapa'}.tabletop`);}
