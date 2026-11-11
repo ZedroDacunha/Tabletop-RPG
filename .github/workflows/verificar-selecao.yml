@@ -1,0 +1,44 @@
+name: Verificar seleção múltipla
+on:
+  workflow_dispatch:
+  push:
+    branches: [arena/b40d8fca-tabletop-rpg]
+permissions:
+  contents: write
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+      - name: Preparar o Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Instalar dependências
+        run: npm ci
+      - name: Compilar o site
+        run: npm run build
+      - name: Instalar o navegador de teste
+        run: npm install --no-save puppeteer-core@23.11.1
+      - name: Servir o site compilado
+        run: |
+          mkdir -p /tmp/site
+          cp -r dist /tmp/site/Tabletop-RPG
+          cd /tmp/site
+          nohup python3 -m http.server 4173 >/tmp/servidor.log 2>&1 &
+          sleep 2
+          curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:4173/Tabletop-RPG/
+      - name: Verificar no navegador
+        run: node scripts/verificar-selecao.mjs
+      - name: Publicar capturas na branch capturas-ci
+        if: always()
+        run: |
+          if [ -d capturas ] && [ -n "$(ls -A capturas)" ]; then
+            git config user.name "verificacao"
+            git config user.email "verificacao@exemplo.com"
+            git checkout -B capturas-ci
+            git add -f capturas
+            git commit -m "Capturas da verificação de seleção"
+            git push -f origin HEAD:capturas-ci
+          fi
