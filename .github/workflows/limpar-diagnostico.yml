@@ -1,0 +1,22 @@
+name: Limpar diagnóstico
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  fechar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fechar as issues de diagnóstico
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for n in 3 4 5; do
+            gh issue close "$n" --repo "$GITHUB_REPOSITORY" --reason "not planned" || true
+          done
+          gh issue list --repo "$GITHUB_REPOSITORY" --state all --limit 5
