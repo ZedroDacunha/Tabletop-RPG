@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {emptyProject,exampleProject,makeEntity,nudgeEntity,selectionCenter,toggleSelection,validateProject,KINDS} from './project';
+import {emptyProject,exampleProject,makeEntity,makeGroup,assignGroup,pruneGroups,withGroups,nudgeEntity,selectionCenter,toggleSelection,validateProject,KINDS} from './project';
 import {catalog} from '../assets/catalog';
 
 test('example survives a complete JSON export/import without losing transforms',()=>{
@@ -60,4 +60,29 @@ test('selection helpers toggle additively and average the group centre',()=>{
  assert.deepEqual(selectionCenter([]),[0,0,0]);
  const a=makeEntity('cube','A',[2,3,4]),b=makeEntity('cube','B',[4,1,0]);
  assert.deepEqual(selectionCenter([a,b]),[3,2,2]);
+});
+
+test('groups travel with the project and clean themselves up',()=>{
+ const p=emptyProject();const group=makeGroup('  Bosque antigo  ');
+ assert.equal(group.name,'Bosque antigo');
+ p.groups=[group];p.objects=[makeEntity('pine','A'),makeEntity('pine','B')];
+ p.objects=assignGroup(p.objects,new Set([p.objects[0].id]),group.id);
+ const restored=validateProject(JSON.parse(JSON.stringify(p)));
+ assert.deepEqual(restored.groups,[group]);
+ assert.equal(restored.objects[0].groupId,group.id);
+ assert.equal(restored.objects[1].groupId,undefined);
+ assert.deepEqual(pruneGroups(restored.groups,restored.objects),[group]);
+ const cleared=assignGroup(restored.objects,new Set(restored.objects.map(o=>o.id)));
+ assert.equal(cleared.some(o=>o.groupId!==undefined),false);
+ assert.equal(pruneGroups(restored.groups,cleared),undefined);
+ assert.equal('groups' in withGroups(restored,undefined),false);
+});
+
+test('rejects malformed groups and drops references to missing ones',()=>{
+ const p=emptyProject();p.groups=[makeGroup('Ruínas')];p.objects=[makeEntity('rock','Pedra')];
+ const dangling=JSON.parse(JSON.stringify(p));dangling.objects[0].groupId='nao-existe';
+ assert.equal(validateProject(dangling).objects[0].groupId,undefined);
+ const duplicated=JSON.parse(JSON.stringify(p));duplicated.groups=[p.groups[0],{...p.groups[0]}];
+ assert.throws(()=>validateProject(duplicated),/grupos com identificadores/);
+ assert.throws(()=>validateProject({...JSON.parse(JSON.stringify(p)),groups:[{id:'a',name:'   '}]}),/grupo do mapa/);
 });
