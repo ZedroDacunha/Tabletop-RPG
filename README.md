@@ -37,6 +37,8 @@ O build publicado leva de 1 a 2 minutos para aparecer no ar. O GitHub Pages prec
 - Biblioteca de 32 peças: árvores (pinheiro, carvalho, bétula, árvore seca), vegetação rasteira, rochas, lagoa, cristais, ruínas (muralha, arco, torre, coluna, escadaria, santuário), estruturas (poço, cerca, ponte), acampamento (tenda, fogueira, lanterna, estandarte, caixote, barril, carrinho, baú), decoração (estátua, piso de pedra) e formas básicas.
 - Inserir, selecionar, mover, rotacionar, escalar, duplicar, ocultar, travar e remover objetos.
 - **Grupos**: `Ctrl/Cmd + G` agrupa a seleção num grupo nomeado (o nome pode ser trocado no painel de propriedades) e `Ctrl/Cmd + Shift + G` desfaz. Na aba Cena o grupo aparece como uma pasta recolhível com a contagem de peças; clicar no nome seleciona o grupo inteiro e o gizmo age nele como uma peça única. Duplicar um grupo cria um grupo novo com as cópias, e o grupo desaparece sozinho quando a última peça sai.
+- **Alinhamento em lote** (painel de seleção múltipla): `Alinhar X/Y/Z` põe todas as peças na mesma linha, usando a primeira peça destravada da seleção como referência; `Distribuir X/Z` espalha três ou mais peças com espaçamento igual entre as extremas. Peças travadas ficam onde estão.
+- **Modo apresentação** (`P`): tela cheia só com a cena — sem cabeçalho, biblioteca, painel de propriedades, barras de ferramentas ou rodapé. Botão direito orbita, scroll aproxima; `Esc` ou `P` volta ao editor. O botão de apresentação fica no topo, ao lado de exportar.
 - **Seleção múltipla**: Shift + clique (ou Ctrl/Cmd + clique) soma e retira peças no mapa e na lista da Cena; Ctrl/Cmd + A seleciona todas. As peças selecionadas ganham anel, e o gizmo aparece no centro do grupo para arrastar, girar ou escalar tudo junto. Setas, `Ctrl+D` e `Delete` valem para a seleção inteira, e o painel mostra as ações do conjunto (focar, duplicar, travar, remover).
 - **Meus mapas**: o botão no topo abre a biblioteca de mapas salvos neste navegador, com miniatura gerada a partir das peças, contagem e quando foi salvo. Dá para abrir outro mapa, excluir os que não usa mais e criar um novo sem perder o atual; o último aberto volta ao recarregar a página.
 - **Camadas** (painel Propriedades → Camadas): Natureza, Construções, Objetos, Básicos e Importados aparecem com a contagem de peças e podem ser ocultadas ou travadas de uma vez. Ocultar só tira o desenho da cena — nada é apagado, e o estado fica salvo com o mapa.
@@ -70,6 +72,7 @@ O build publicado leva de 1 a 2 minutos para aparecer no ar. O GitHub Pages prec
 | Remover | Delete |
 | Grade | G |
 | Régua e alinhamento | M |
+| Modo apresentação | P |
 | Cancelar | Esc |
 
 Clique em uma peça da biblioteca e depois no chão do mapa. As ferramentas 3D operam pelos eixos; o painel permite informar valores precisos. O eixo Y representa altura e cada unidade representa um metro. Modelos importados são centralizados no chão e normalizados para 3 m na maior dimensão, podendo ser escalados depois.

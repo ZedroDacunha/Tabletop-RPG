@@ -52,3 +52,23 @@
 .map-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}
 .map-actions .quiet-button{padding:5px 10px;font-size:9px}
 .map-current{font-size:8px;letter-spacing:.6px;color:#b6cd9d;text-transform:uppercase}
+
+/* Modo apresentação */
+.showcase{position:fixed;inset:0;z-index:80;background:#0b120e;overflow:hidden}
+.showcase canvas{display:block}
+.showcase-top{position:absolute;top:22px;left:26px;right:26px;display:flex;align-items:center;justify-content:space-between;gap:16px;z-index:5;pointer-events:none}
+.showcase-title{font-family:'Manrope',sans-serif;font-size:18px;font-weight:550;letter-spacing:-.2px;color:#eef6e3;text-shadow:0 2px 18px #000a;pointer-events:none}
+.showcase-actions{display:flex;gap:8px;pointer-events:auto;opacity:.55;transition:opacity .2s}
+.showcase:hover .showcase-actions,.showcase-actions:focus-within{opacity:1}
+.showcase-actions button{display:flex;align-items:center;gap:6px;padding:7px 12px;border:1px solid #62764f;border-radius:20px;background:#1d2a1ecc;color:#dbecc4;font-size:10px;backdrop-filter:blur(8px)}
+.showcase-actions button:hover{background:#2a3b27;color:#f0ffd8}
+.showcase-actions kbd{font-family:inherit;font-size:9px;border:1px solid #5c7049;border-radius:4px;padding:1px 5px;color:#b9cfa2}
+.showcase-hint{position:absolute;bottom:20px;left:26px;display:flex;align-items:center;gap:14px;z-index:5;color:#a9bd97;font-size:9px;letter-spacing:.2px;text-shadow:0 1px 8px #000;opacity:.75;pointer-events:none}
+.showcase-hint kbd{font-family:inherit;font-size:9px;border:1px solid #56684a;border-radius:4px;padding:0 4px;color:#d3e5bb}
+.showcase-hint span:not(:first-child)::before{content:"·";margin-right:14px;color:#5d6d51}
+
+/* Alinhamento em lote */
+.align-row{display:flex;align-items:center;gap:5px;margin:0 0 7px}
+.align-row span{flex:1;font-size:9px;color:#93a888;letter-spacing:.3px}
+.align-row button{width:30px;height:24px;border:1px solid #415237;border-radius:5px;color:#b7cb9f;font-size:9px;display:flex;align-items:center;justify-content:center}
+.align-row button:hover{background:#33452b;color:#e2f3c9}

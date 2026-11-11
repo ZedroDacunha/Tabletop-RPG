@@ -43,6 +43,23 @@ export function selectionCenter(entities:Entity[]):Vec3{
  return [sum[0]/entities.length,sum[1]/entities.length,sum[2]/entities.length];
 }
 
+export function alignEntities(objects:Entity[], ids:string[], axis:'x'|'y'|'z'):Entity[]{
+ const index:0|1|2=axis==='x'?0:axis==='y'?1:2;
+ const inside=new Set(ids);
+ const targets:Entity[]=[];for(const id of ids){const found=objects.find(o=>o.id===id);if(found&&!found.locked)targets.push(found)}
+ if(targets.length<2)return objects;
+ const value=targets[0].position[index];
+ return objects.map(o=>{if(!inside.has(o.id)||o.locked)return o;const position=[...o.position] as Vec3;position[index]=value;return {...o,position}});
+}
+export function distributeEntities(objects:Entity[], ids:string[], axis:'x'|'z'):Entity[]{
+ const index:0|2=axis==='x'?0:2;
+ const inside=new Set(ids);
+ const targets=objects.filter(o=>inside.has(o.id)&&!o.locked).map(o=>({id:o.id,value:o.position[index]})).sort((a,b)=>a.value-b.value);
+ if(targets.length<3)return objects;
+ const first=targets[0].value,last=targets[targets.length-1].value,step=(last-first)/(targets.length-1);
+ const positions=new Map<string,number>(targets.map((t,i)=>[t.id,Math.round((first+step*i)*1000)/1000]));
+ return objects.map(o=>{const value=positions.get(o.id);if(value===undefined)return o;const position=[...o.position] as Vec3;position[index]=value;return {...o,position}});
+}
 export const GUIDE_THRESHOLD=.75;
 export type Neighbour={ entity:Entity; distance:number; delta:Vec3 };
 export function nearestNeighbour(entity:Entity, objects:Entity[]):Neighbour|null{
