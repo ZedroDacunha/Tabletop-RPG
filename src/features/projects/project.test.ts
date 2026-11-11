@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {emptyProject,exampleProject,makeEntity,makeGroup,assignGroup,pruneGroups,withGroups,nudgeEntity,selectionCenter,toggleSelection,nearestNeighbour,alignToNeighbours,validateProject,KINDS} from './project';
+import {emptyProject,exampleProject,makeEntity,makeGroup,assignGroup,pruneGroups,withGroups,nudgeEntity,selectionCenter,toggleSelection,nearestNeighbour,alignToNeighbours,alignEntities,distributeEntities,validateProject,KINDS} from './project';
 import {catalog} from '../assets/catalog';
 
 test('example survives a complete JSON export/import without losing transforms',()=>{
@@ -117,4 +117,33 @@ test('alignment snaps only the axes that are close to another piece',()=>{
  assert.deepEqual(alignToNeighbours([4.6,0,3.9],a,[a,{...b,visible:false}]).position,[4.6,0,3.9]);
  const p=emptyProject();p.settings.guides='talvez' as unknown as boolean;
  assert.throws(()=>validateProject(p),/configurações/);
+});
+
+test('batch alignment puts the pieces on the same line and respects locked ones',()=>{
+ const a=makeEntity('cube','A',[0,0,5]),b=makeEntity('cube','B',[3,0,7]),c={...makeEntity('cube','C',[8,0,9]),locked:true},d=makeEntity('cube','D',[20,0,20]);
+ const ids=[a.id,b.id,c.id];
+ const alignedX=alignEntities([a,b,c,d],ids,'x');
+ assert.deepEqual(alignedX.map(o=>o.position[0]),[0,0,8,20]);
+ assert.deepEqual(alignedX.map(o=>o.position[2]),[5,7,9,20]);
+ assert.equal(alignedX[3],d,'não mexe em quem está fora da seleção');
+ const alignedZ=alignEntities([a,b,c,d],[b.id,a.id],'z');
+ assert.deepEqual(alignedZ.map(o=>o.position[2]),[7,7,9,20]);
+ const alignedY=alignEntities([a,{...b,position:[3,4,7]}],[a.id,b.id],'y');
+ assert.deepEqual(alignedY.map(o=>o.position[1]),[0,0]);
+ assert.equal(alignEntities([a,b,c],[a.id],'x')[1],b,'com menos de duas peças nada muda');
+});
+
+test('batch distribution spreads the pieces evenly between the extremes',()=>{
+ const pieces=[[0,0,0],[5,0,1],[40,0,9]].map(([x,y,z],i)=>makeEntity('cube',`P${i}`,[x,y,z]));
+ const ids=pieces.map(p=>p.id);
+ const spread=distributeEntities(pieces,ids,'x');
+ assert.deepEqual(spread.map(o=>o.position[0]),[0,20,40]);
+ assert.deepEqual(spread.map(o=>o.position[2]),[0,1,9]);
+ const four=[0,1,2,30].map((x,i)=>makeEntity('cube',`Q${i}`,[x,0,0]));
+ const even=distributeEntities(four,four.map(o=>o.id),'x');
+ assert.deepEqual(even.map(o=>o.position[0]),[0,10,20,30]);
+ const locked={...makeEntity('cube','L',[15,0,0]),locked:true};
+ const withLocked=distributeEntities([...four,locked],[...four.map(o=>o.id),locked.id],'x');
+ assert.deepEqual(withLocked.map(o=>o.position[0]),[0,10,20,30,15]);
+ assert.equal(distributeEntities(pieces,[pieces[0].id,pieces[2].id],'x'),pieces,'distribuir exige três peças');
 });
