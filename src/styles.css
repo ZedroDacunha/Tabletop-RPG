@@ -72,3 +72,9 @@
 .align-row span{flex:1;font-size:9px;color:#93a888;letter-spacing:.3px}
 .align-row button{width:30px;height:24px;border:1px solid #415237;border-radius:5px;color:#b7cb9f;font-size:9px;display:flex;align-items:center;justify-content:center}
 .align-row button:hover{background:#33452b;color:#e2f3c9}
+
+/* Trechos */
+.trecho-button{display:flex;align-items:center;gap:8px;width:100%;margin-bottom:6px;padding:7px 11px;border:1px dashed #4a5f3d;border-radius:6px;color:#a9bf98;font-size:9px;text-align:left}
+.trecho-button span{display:flex;flex-direction:column;gap:1px}
+.trecho-button small{font-size:7.5px;color:#7f9573}
+.trecho-button:hover{border-color:#6e8857;color:#d7edb8}
