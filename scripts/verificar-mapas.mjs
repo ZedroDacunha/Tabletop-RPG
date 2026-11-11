@@ -52,7 +52,7 @@ try{
 
  await openMaps();
  const list=await cards();
- ok('biblioteca lista os mapas salvos',list.length===3,list.map(m=>m.name).join(' · '));
+ ok('biblioteca lista os dois mapas',list.length===2,list.map(m=>m.name).join(' · '));
  ok('cada mapa mostra a contagem de peças',list.some(m=>m.name==='Bosque'&&/^13 peças/.test(m.detail))&&list.some(m=>m.name==='Vilarejo'&&/^12 peças/.test(m.detail)),list.map(m=>m.detail).join(' | '));
  ok('todos os mapas têm miniatura',list.every(m=>m.thumb));
  ok('um único mapa marcado como aberto',list.filter(m=>m.current).length===1);
@@ -64,9 +64,9 @@ try{
  ok('o mapa aberto passa a ser o do cabeçalho',(await headerName())==='Bosque',await headerName());
 
  await openMaps();
- await page.click('button[aria-label="Excluir Meu novo mundo"]');
- await page.waitForFunction(()=>document.querySelectorAll('.map-card').length===2,{timeout:15000});
- ok('excluir remove o mapa da biblioteca',(await count('.map-card'))===2,`${await count('.map-card')} mapas`);
+ await page.click('button[aria-label="Excluir Vilarejo"]');
+ await page.waitForFunction(()=>document.querySelectorAll('.map-card').length===1,{timeout:15000});
+ ok('excluir remove o mapa da biblioteca',(await count('.map-card'))===1,`${await count('.map-card')} mapa restante`);
  await closeMaps();
 
  await sleep(1200);
@@ -75,7 +75,7 @@ try{
  await page.waitForFunction(()=>/13\s+objetos?/.test(document.querySelector('footer')?.textContent||''),{timeout:20000});
  ok('o último mapa aberto volta ao recarregar',(await headerName())==='Bosque'&&(await objectCount())===13,`${await headerName()} · ${await objectCount()} objetos`);
  await openMaps();
- ok('a biblioteca persiste entre sessões',(await count('.map-card'))===2,`${await count('.map-card')} mapas`);
+ ok('a biblioteca persiste entre sessões',(await count('.map-card'))===1,`${await count('.map-card')} mapa`);
  ok('console sem erros',errors.length===0,errors.join(' | ').slice(0,160));
 }catch(e){
  results.push(`FALHOU — exceção: ${e instanceof Error?e.message:String(e)}`);failures++;
