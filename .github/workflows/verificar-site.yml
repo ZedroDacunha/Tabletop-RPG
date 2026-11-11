@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   verificar:
@@ -27,20 +28,26 @@ jobs:
       - name: Instalar Puppeteer
         run: npm i --no-save puppeteer-core@23
 
-      - name: Descobrir o Chrome
-        run: |
-          which google-chrome || which google-chrome-stable || which chromium || true
-
-      - name: Testar build local e site publicado
+      - name: Preparar Chrome e servidor
         run: |
           mkdir -p out
           python3 -m http.server 8000 --directory dist &
           sleep 2
-          curl -s -o out/local.html -w 'local %{http_code}\n' http://127.0.0.1:8000/
-          curl -s -o out/live.html -w 'live %{http_code}\n' https://zedrodacunha.github.io/Tabletop-RPG/ || true
-          head -c 800 out/live.html || true
+          curl -s -o /dev/null -w 'servidor local: %{http_code}\n' http://127.0.0.1:8000/
+
+      - name: Capturar telas
+        run: |
+          export CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)"
+          echo "chrome: $CHROME_PATH"
           node scripts/verificar.mjs
           cat out/relatorio.txt
+
+      - name: Publicar capturas em issue
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -f out/relatorio.txt ]; then node scripts/publicar-capturas.mjs; fi
 
       - name: Guardar resultados
         if: always()
