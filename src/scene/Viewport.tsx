@@ -1,4 +1,4 @@
-import {Component,useEffect,useMemo,useRef,useState,Suspense,type ReactNode} from 'react';
+import {Component,useEffect,useMemo,useRef,useState,Suspense,type ReactNode,type RefObject} from 'react';
 import {Canvas,useThree,type ThreeEvent} from '@react-three/fiber';
 import {Grid,OrbitControls,TransformControls} from '@react-three/drei';
 import type {OrbitControls as Controls} from 'three-stdlib';
@@ -34,7 +34,7 @@ function Placed({entity,project,selected,tool,onSelect,onTransform,onError}:Omit
  {entity.kind==='model'&&asset?<ImportedModel asset={asset} onError={onError}/>:entity.kind!=='model'?<BuiltinModel kind={entity.kind} color={entity.color}/>:null}
  {active&&<mesh rotation={[-Math.PI/2,0,0]} position={[0,.015,0]}><ringGeometry args={[1.45,1.49,64]}/><meshBasicMaterial color="#d1edb2" transparent opacity={.85} depthWrite={false}/></mesh>}
  </group>;
- return edit?<TransformControls mode={tool} translationSnap={project.settings.snap?project.settings.gridSize:null} rotationSnap={project.settings.snap?Math.PI/12:null} scaleSnap={project.settings.snap ? .1 : null} onMouseUp={capture}>{model}</TransformControls>:model;
+ return <>{model}{edit&&<TransformControls object={ref as unknown as RefObject<THREE.Object3D>} mode={tool} translationSnap={project.settings.snap?project.settings.gridSize:null} rotationSnap={project.settings.snap?Math.PI/12:null} scaleSnap={project.settings.snap ? .1 : null} onMouseUp={capture}/>}</>;
 }
 type AtmosphereKey='dawn'|'day'|'dusk'|'night';
 type Ambience={fogTint:number;skyTop:string;skyHorizon:string;glow:string;sunColor:string;sunDisc:string;sunIntensity:number;sunPosition:[number,number,number];ambient:number;hemiSky:string;hemiGround:string;hemi:number;ground:string;groundDeep:string;grid:string;gridSection:string;fog:[number,number];exposure:number;stars:number};
