@@ -65,8 +65,10 @@ try {
 
   // carrega o cenário de exemplo para ter conteúdo na cena
   await page.evaluate(() => [...document.querySelectorAll('.empty-world button')].find((b) => b.textContent.includes('exemplo'))?.click());
-  await page.waitForSelector('.scene-row', { timeout: 60000 });
-  await esperar(2500);
+  await esperar(4000);
+  await page.evaluate(() => [...document.querySelectorAll('.library-tabs button')].find((b) => b.textContent.includes('Cena'))?.click());
+  await page.waitForSelector('.scene-row', { timeout: 40000 });
+  await esperar(1500);
   await page.evaluate(() => document.querySelector('.scene-select')?.click());
   await esperar(1200);
 
@@ -79,6 +81,7 @@ try {
   }
 } catch (e) {
   saida.push('FALHA: ' + String(e));
+  try { const ps = await browser.pages(); const atual = ps[ps.length - 1]; if (atual) { await atual.screenshot({ path: path.join(capturas, 'falha.jpg'), type: 'jpeg', quality: 80 }); saida.push('objetos na cena: ' + (await atual.evaluate(() => `${document.querySelectorAll('.scene-row').length} linhas, aba ativa: ${document.querySelector('.library-tabs button.active')?.textContent ?? '-'}`))); } } catch {}
   console.log('falha', String(e));
 } finally {
   await browser.close();
