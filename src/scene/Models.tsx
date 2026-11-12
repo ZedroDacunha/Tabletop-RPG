@@ -2,12 +2,17 @@ import {useEffect,useMemo,useState} from 'react';
 import * as THREE from 'three';
 import {clone} from 'three/examples/jsm/utils/SkeletonUtils.js';
 import type {Asset,Kind} from '../features/projects/project';
+import {buildDetailedModel} from './detailedModels';
+import {isDetailedKind,type DetailedKind} from '../features/assets/detailedKinds';
 import {loadAsset} from '../features/assets/importer';
 function Box({p=[0,0,0],s=[1,1,1],c='#a4ac9e',r=[0,0,0]}:{p?:[number,number,number];s?:[number,number,number];c?:string;r?:[number,number,number]}){return <mesh position={p} rotation={r} castShadow receiveShadow><boxGeometry args={s}/><meshStandardMaterial color={c} roughness={.95}/></mesh>}
 function Stone({p=[0,0,0],s=[1,1,1],c='#89958a'}:{p?:[number,number,number];s?:[number,number,number];c?:string}){return <mesh position={p} scale={s} castShadow receiveShadow rotation={[.1,.4,.15]}><dodecahedronGeometry args={[1,0]}/><meshStandardMaterial color={c} roughness={1} flatShading/></mesh>}
 function Cylinder({p=[0,0,0],r1=.25,r2=.3,h=1,c='#74624b',rotation=[0,0,0],segments=8}:{p?:[number,number,number];r1?:number;r2?:number;h?:number;c?:string;rotation?:[number,number,number];segments?:number}){return <mesh position={p} rotation={rotation} castShadow receiveShadow><cylinderGeometry args={[r1,r2,h,segments]}/><meshStandardMaterial color={c} roughness={.9} flatShading/></mesh>}
+const modelCache=new Map<DetailedKind,THREE.Group>();
+function DetailedModel({kind}:{kind:DetailedKind}){const model=useMemo(()=>{if(!modelCache.has(kind))modelCache.set(kind,buildDetailedModel(kind));return modelCache.get(kind)!.clone(true)},[kind]);return <primitive object={model} dispose={null}/>}
 export function BuiltinModel({kind,color='#a7bf99'}:{kind:Kind;color?:string}){
  const tentShape=useMemo(()=>{const s=new THREE.Shape();s.moveTo(-1.15,0);s.lineTo(1.15,0);s.lineTo(0,1.7);s.closePath();return s;},[]);
+ if(isDetailedKind(kind))return <DetailedModel kind={kind}/>;
  switch(kind){
  case 'pine': return <group><Cylinder p={[0,1.3,0]} h={2.6} r1={.13} r2={.24}/>{[0,1,2].map(i=><mesh key={i} position={[0,1.8+i*.8,0]} rotation={[0,i*.35,0]} castShadow><coneGeometry args={[1.2-i*.23,2,7]}/><meshStandardMaterial color={['#466449','#547652','#6b8d62'][i]} roughness={1} flatShading/></mesh>)}</group>;
  case 'oak':return <group><Cylinder p={[0,1.2,0]} h={2.4} r1={.2} r2={.34}/><Cylinder p={[.45,1.8,0]} h={1.3} r1={.1} r2={.16} rotation={[0,0,-.65]}/><Stone p={[-.65,2.6,0]} s={[1.2,1.05,1.2]} c="#789267"/><Stone p={[.7,2.9,0]} s={[1.2,1.25,1.15]} c="#91a775"/><Stone p={[0,3.25,.5]} s={[1.1,1.1,1.1]} c="#9eb280"/></group>;
@@ -49,3 +54,4 @@ export function ImportedModel({asset,onError}:{asset:Asset;onError:(message:stri
  if(failed)return <Box c="#b86252"/>;if(!model)return <Box c="#738879"/>;
  return <primitive object={model} dispose={null}/>;
 }
+

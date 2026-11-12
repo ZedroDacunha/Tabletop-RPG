@@ -10,7 +10,7 @@ export const layers:Layer[]=[
  {id:'basicos',name:'Básicos'},
  {id:'importados',name:'Importados'},
 ];
-const BY_CATEGORY:Record<string,LayerId>={'Natureza':'natureza','Construções':'construcoes','Objetos':'objetos','Básicos':'basicos','Importados':'importados'};
+const BY_CATEGORY:Record<string,LayerId>={'Natureza':'natureza','Construções':'construcoes','Objetos':'objetos','Mobiliário':'objetos','Acampamento':'objetos','Iluminação':'objetos','Masmorra':'objetos','Decoração':'objetos','Básicos':'basicos','Importados':'importados'};
 const KIND_LAYER=new Map<string,LayerId>(catalog.map(item=>[item.kind,BY_CATEGORY[item.category]??'basicos']));
 
 export function layerOf(entity:Entity):LayerId{
@@ -23,3 +23,4 @@ export function layerSummary(objects:Entity[],layer:LayerId):{total:number;visib
 export function setLayer(objects:Entity[],layer:LayerId,change:{visible?:boolean;locked?:boolean}):Entity[]{
  return objects.map(o=>layerOf(o)!==layer?o:{...o,...(change.visible!==undefined?{visible:change.visible}:{}),...(change.locked!==undefined?{locked:change.locked}:{})});
 }
+

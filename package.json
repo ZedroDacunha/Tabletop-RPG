@@ -7,7 +7,8 @@
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "test": "node --import tsx --test src/features/projects/project.test.ts src/features/projects/library.test.ts src/features/projects/clip.test.ts src/features/projects/snippets.test.ts src/features/scenes/presets.test.ts src/features/scenes/layers.test.ts src/features/scenes/views.test.ts"
+    "test": "node --import tsx --test src/features/projects/project.test.ts src/features/projects/library.test.ts src/features/projects/clip.test.ts src/features/projects/snippets.test.ts src/features/scenes/presets.test.ts src/features/scenes/layers.test.ts src/features/scenes/views.test.ts src/features/assets/catalog.test.ts",
+    "assets:previews": "node --import tsx scripts/generate-asset-previews.ts"
   },
   "dependencies": {
     "@react-three/drei": "10.7.6",

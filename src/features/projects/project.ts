@@ -1,5 +1,7 @@
 export type Vec3 = [number, number, number];
+import {DETAILED_KINDS} from '../assets/detailedKinds';
 export const KINDS = [
+ ...DETAILED_KINDS,
  'pine','oak','birch','deadtree','bush','mushrooms','log','crystal','pond',
  'rock','wall','arch','floor','tower','stairs','fence','bridge','shrine',
  'tent','campfire','lantern','banner','statue','chest','cart','crate','barrel','well','column',
@@ -147,3 +149,4 @@ export function exampleProject():Project{
  add('tower','Torre caída',-9.2,-1.2,1.05,.2);add('shrine','Santuário antigo',0,-8.6,1,0);
  p.camera={position:[23,20,27],target:[0,0,0]};return p;
 }
+
