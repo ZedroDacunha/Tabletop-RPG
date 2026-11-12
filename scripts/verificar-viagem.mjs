@@ -122,10 +122,13 @@ try {
   check('a pílula começa na primeira vista', (await text()).includes('1 / 2'), '1 / 2');
 
   await page.keyboard.press('ArrowRight');
-  await sleep(250);
+  await sleep(700);
+  const early = await fingerprint();
+  await sleep(700);
   const middle = await fingerprint();
   const lastView = await settle();
-  check('a câmera se move durante a viagem', middle !== firstView, `meio ${middle} ≠ início ${firstView}`);
+  check('a câmera se move durante a viagem', early !== firstView && middle !== firstView && middle !== lastView,
+    `0,7 s ${early} · 1,4 s ${middle} · início ${firstView} · fim ${lastView}`);
   check('a viagem termina em outro enquadramento', lastView !== firstView && lastView !== middle, `fim ${lastView}`);
   check('a pílula acompanha a troca de vista', (await text()).includes('2 / 2'), '2 / 2');
   await page.screenshot({ path: 'capturas/viagem-apresentacao.jpg', type: 'jpeg', quality: 88 });
