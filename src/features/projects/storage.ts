@@ -1,10 +1,13 @@
 import {uid,validateProject,type Project} from './project';
 import {copyName,newestFirst,summarise,type ProjectSummary} from './library';
+import type {Clip} from './clip';
+import {cleanSnippetName,summariseClip,type SnippetSummary} from './snippets';
 
-const DB='tabletop-rpg',VERSION=2,LEGACY_KEY='current';
+const DB='tabletop-rpg',VERSION=3,LEGACY_KEY='current';
+const STORES=['projects','index','meta','snippets','snippetIndex'];
 const database=()=>new Promise<IDBDatabase>((resolve,reject)=>{
  const request=indexedDB.open(DB,VERSION);
- request.onupgradeneeded=()=>{const db=request.result;for(const store of ['projects','index','meta'])if(!db.objectStoreNames.contains(store))db.createObjectStore(store);};
+ request.onupgradeneeded=()=>{const db=request.result;for(const store of STORES)if(!db.objectStoreNames.contains(store))db.createObjectStore(store);};
  request.onsuccess=()=>resolve(request.result);
  request.onerror=()=>reject(request.error);
 });
@@ -71,3 +74,45 @@ export async function deleteProject(id:string):Promise<void>{
 }
 export function downloadFile(data:Blob,name:string){const url=URL.createObjectURL(data);const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);}
 export function exportProject(p:Project){downloadFile(new Blob([JSON.stringify(p)],{type:'application/json'}),`${p.name.replace(/[^\p{L}\p{N}_-]/gu,'_')||'mapa'}.tabletop`);}
+
+export type SnippetRecord={id:string;name:string;createdAt:string;clip:Clip};
+
+export async function listSnippets():Promise<SnippetSummary[]>{
+ const db=await database();
+ try{
+  const summaries=await new Promise<SnippetSummary[]>((resolve,reject)=>{const request=db.transaction('snippetIndex','readonly').objectStore('snippetIndex').getAll();request.onsuccess=()=>resolve((request.result??[]) as SnippetSummary[]);request.onerror=()=>reject(request.error);});
+  return summaries.filter(s=>s&&typeof s.id==='string').sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)));
+ }finally{db.close()}
+}
+export async function saveSnippet(record:SnippetRecord):Promise<void>{
+ const db=await database();
+ try{
+  await write(db,['snippets','snippetIndex'],tx=>{tx.objectStore('snippets').put({...record,name:cleanSnippetName(record.name)},record.id);tx.objectStore('snippetIndex').put({...summariseClip(record),name:cleanSnippetName(record.name)},record.id);});
+ }finally{db.close()}
+}
+export async function openSnippet(id:string):Promise<Clip|null>{
+ const db=await database();
+ try{
+  const record=await readKey<SnippetRecord>(db,'snippets',id);
+  if(!record||!record.clip)return null;
+  return record.clip;
+ }finally{db.close()}
+}
+export async function renameSnippet(id:string,name:string):Promise<void>{
+ const clean=cleanSnippetName(name);
+ const db=await database();
+ try{
+  const record=await readKey<SnippetRecord>(db,'snippets',id);
+  if(!record)return;
+  await write(db,['snippets','snippetIndex'],tx=>{
+   tx.objectStore('snippets').put({...record,name:clean,clip:{...record.clip,name:clean}},id);
+   tx.objectStore('snippetIndex').put({...summariseClip({...record,name:clean}),name:clean},id);
+  });
+ }finally{db.close()}
+}
+export async function deleteSnippet(id:string):Promise<void>{
+ const db=await database();
+ try{
+  await write(db,['snippets','snippetIndex'],tx=>{tx.objectStore('snippets').delete(id);tx.objectStore('snippetIndex').delete(id);});
+ }finally{db.close()}
+}
