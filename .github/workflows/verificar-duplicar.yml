@@ -5,6 +5,9 @@ on:
     branches: [arena/27f00f4d-tabletop-rpg]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   verificar:
     runs-on: ubuntu-latest
@@ -31,14 +34,22 @@ jobs:
         run: npm install --no-save puppeteer-core
 
       - name: Verificar a duplicação no navegador
+        id: verificar
+        continue-on-error: true
         env:
           CHROME: /usr/bin/google-chrome
         run: node scripts/verificar-duplicar.mjs
 
-      - name: Guardar as capturas
+      - name: Publicar as capturas
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: capturas
-          path: capturas
-          if-no-files-found: warn
+        run: |
+          git config user.name "verificacao"
+          git config user.email "verificacao@users.noreply.github.com"
+          git checkout -B capturas-ci
+          git add -f capturas
+          git commit -m "Capturas: duplicar mapa" || echo "sem mudanças"
+          git push -f origin capturas-ci
+
+      - name: Repassar o resultado da verificação
+        if: steps.verificar.outcome == 'failure'
+        run: exit 1
