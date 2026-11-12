@@ -1,5 +1,5 @@
 import {uid,validateProject,type Project} from './project';
-import {copyName,newestFirst,summarise,type ProjectSummary} from './library';
+import {cleanMapName,copyName,newestFirst,summarise,type ProjectSummary} from './library';
 import type {Clip} from './clip';
 import {cleanSnippetName,summariseClip,type SnippetSummary} from './snippets';
 
@@ -59,6 +59,19 @@ export async function duplicateProject(id:string):Promise<Project|null>{
   const copy:Project={...original,id:uid(),name:copyName(original.name,(await readIndex(db)).map(s=>s.name)),updatedAt:new Date().toISOString()};
   await store(db,copy,false);
   return copy;
+ }finally{db.close()}
+}
+export async function renameProject(id:string,name:string):Promise<ProjectSummary|null>{
+ const db=await database();
+ try{
+  const raw=await readKey<unknown>(db,'projects',id);
+  if(raw===undefined)return null;
+  const original=validateProject(raw);
+  const clean=cleanMapName(name,original.name);
+  if(clean===original.name)return summarise(original);
+  const next:Project={...original,name:clean};
+  await store(db,next,false);
+  return summarise(next);
  }finally{db.close()}
 }
 export async function deleteProject(id:string):Promise<void>{

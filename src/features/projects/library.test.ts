@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {emptyProject,makeEntity} from './project';
-import {MAX_DOTS,MAP_SORTS,NAME_MAX,copyName,filterProjects,newestFirst,sortProjects,summarise,timeAgo} from './library';
+import {MAX_DOTS,MAP_NAME_MAX,MAP_SORTS,NAME_MAX,cleanMapName,copyName,filterProjects,newestFirst,sortProjects,summarise,timeAgo} from './library';
 
 test('the summary keeps the map identity and a small preview of the pieces',()=>{
  const p=emptyProject();p.name='Bosque';p.objects=[makeEntity('pine','A',[3,0,-4]),{...makeEntity('rock','B'),visible:false}];
@@ -77,4 +77,15 @@ test('the library sorts by date, name and map size',()=>{
  sortProjects(maps,'nome');
  assert.deepEqual(maps.map(m=>m.name),original,'a lista original não é reordenada no lugar');
  assert.deepEqual(MAP_SORTS.map(([id])=>id),['recentes','nome','tamanho']);
+});
+
+test('the map name is cleaned before it is saved',()=>{
+ assert.equal(cleanMapName('  Bosque   Norte '),'Bosque Norte','espaços repetidos e das pontas saem');
+ assert.equal(cleanMapName('Ruína do portão'),'Ruína do portão','acentos e maiúsculas são preservados');
+ assert.equal(cleanMapName(''),'Mapa');
+ assert.equal(cleanMapName('    '),'Mapa','só espaços vira o nome padrão');
+ assert.equal(cleanMapName('','Bosque'),'Bosque','nome vazio mantém o nome anterior');
+ assert.equal(cleanMapName('x'.repeat(200)).length,MAP_NAME_MAX);
+ assert.equal(cleanMapName('  '+'y'.repeat(200)+'   ').length,MAP_NAME_MAX,'o corte não deixa espaço no fim');
+ assert.equal(MAP_NAME_MAX,120);
 });

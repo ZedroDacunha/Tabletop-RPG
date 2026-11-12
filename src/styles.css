@@ -47,7 +47,7 @@
 .map-card.current{border-color:#6e8857;background:#2d3d26}
 .map-thumb{width:54px;height:54px;border-radius:6px;flex-shrink:0;border:1px solid #45573a}
 .map-info{flex:1;min-width:0}
-.map-info strong{display:block;font-size:11px;font-weight:550;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.map-name{display:block;width:100%;min-width:0;background:transparent;border:1px solid transparent;border-radius:5px;padding:1px 4px;margin-left:-4px;font-size:11px;font-weight:550;line-height:1.4;color:#e6ebdf;text-overflow:ellipsis;cursor:text}.map-name:hover{background:#33422a;color:#ecf4e3}.map-name:focus{background:#141d13;border-color:#7d9a63!important;color:#fff;outline:none}.map-name:disabled{opacity:.65;cursor:default}
 .map-info span{font-size:9px;color:#93a888}
 .map-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}
 .map-actions .quiet-button{padding:5px 10px;font-size:9px}

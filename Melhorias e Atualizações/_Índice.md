@@ -2,7 +2,7 @@
 
 Notas de `Melhorias e Atualizações/`, escritas a partir do modelo em [[Melhorias e Atualizações]].
 
-Total: **25** notas.
+Total: **26** notas.
 
 ---
 
@@ -17,8 +17,9 @@ O repositório salta de #2 para #51: as PRs #3–#50 não existem, então a base
 - [[MEL-023 - Câmera orbital, vistas de topo e exportar imagem]] — concluída — Câmera orbital com painel e rotação no botão direito, alternância perspectiva/topo, "centralizar", foco na peça selecionada (`F`) e exportação do mapa como imagem (`PNG` no 3D, `SVG` no modo compatível).
 - [[MEL-024 - Modo de compatibilidade sem WebGL]] — concluída — Sem WebGL (máquina virtual, navegador restrito, driver bloqueado), o editor abre um mapa esquemático em SVG isométrico: dá para selecionar, posicionar, editar propriedades e exportar a imagem — sem prometer 3D.
 - [[MEL-025 - Publicação automática e recarga no dev]] — concluída — Todo `push` na `main` compila, testa e publica o site no GitHub Pages; e o `npm run dev` recarrega a página a cada mudança, inclusive pela prévia remota.
+- [[MEL-026 - Renomear mapa direto no cartão]] — concluída — O nome do mapa virou campo editável no próprio cartão de `Meus mapas`: clique, edite, `Enter` confirma e `Esc` descarta. Sem duplicar, sem abrir o mapa e sem passar pelo título do topo.
 
-## Editor de mapas (PRs #51–#86)
+## Editor de mapas (PRs #51–#89)
 
 - [[MEL-001 - Ambiência e acervo de 32 peças]] — concluída — A cena deixou de ser um plano cinza: ganhou céu em gradiente, sol ou lua, estrelas, colinas no horizonte, névoa e chão com textura — e o catálogo foi para 32 peças 3D divididas em cinco categorias.
 - [[MEL-002 - Gizmo preso ao objeto selecionado]] — concluída — Mover, girar e escalar passaram a ter alças 3D (`TransformControls`) ancoradas na peça selecionada, discretas e com encaixe na grade.
