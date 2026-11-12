@@ -115,10 +115,17 @@ try {
 
   const page = await browser.newPage();
   const erros = [];
-  page.on('pageerror', (erro) => erros.push(String(erro)));
-  page.on('console', (msg) => {
-    if (msg.type() === 'error') erros.push(msg.text());
+  page.on('pageerror', (erro) => {
+    erros.push(String(erro));
+    console.log('ERRO DE PÁGINA:', String(erro));
   });
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') {
+      erros.push(msg.text());
+      console.log('CONSOLE:', msg.text());
+    }
+  });
+  page.on('requestfailed', (req) => console.log('REQUISIÇÃO FALHOU:', req.url(), req.failure()?.errorText));
 
   await page.goto(BASE, { waitUntil: 'networkidle2' });
   await page.evaluate(
@@ -129,7 +136,7 @@ try {
       }),
   );
   await page.reload({ waitUntil: 'networkidle2' });
-  await page.waitForSelector('button[aria-label="Novo mapa"]', { visible: true });
+  await page.waitForSelector('button[aria-label="Novo mapa"]', { visible: true, timeout: 20000 });
   registrar(true, 'editor carregado com banco limpo');
 
   await criarMapa(page, 'Bosque');
@@ -254,6 +261,18 @@ try {
   registrar(semErro.length === 0, 'nenhum erro de página no console', semErro.slice(0, 3).join(' // '));
 } catch (erro) {
   registrar(false, 'execução interrompida', String(erro));
+  try {
+    const paginas = await browser.pages();
+    const atual = paginas[paginas.length - 1];
+    if (atual) {
+      await atual.screenshot({ path: path.join(capturas, 'falha.jpg'), type: 'jpeg', quality: 80 });
+      fs.writeFileSync(path.join(capturas, 'falha.html'), await atual.content());
+      fs.writeFileSync(path.join(capturas, 'falha-url.txt'), atual.url());
+      console.log('URL NA FALHA:', atual.url());
+    }
+  } catch (falha) {
+    console.log('não foi possível capturar a falha:', String(falha));
+  }
 } finally {
   await browser.close();
   servidor.close();
