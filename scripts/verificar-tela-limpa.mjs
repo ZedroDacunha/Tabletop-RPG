@@ -56,6 +56,13 @@ try {
   await page.evaluate(() => document.querySelector('.scene-select')?.click());
   await esperar(1200);
 
+  const reguaCedo = await page.evaluate(() => {
+    const r = document.querySelector('.viewport-bottom-left');
+    const texto = r?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+    return { existe: Boolean(r), texto };
+  });
+  registrar(reguaCedo.existe && /até/.test(reguaCedo.texto), 'régua da peça mais próxima aparece com uma peça selecionada', reguaCedo.texto);
+
   // 1) a barra docada existe e não flutua sobre a cena
   const barra = await page.evaluate(() => {
     const b = document.querySelector('.canvas-bar');
@@ -94,8 +101,13 @@ try {
       const r = el.getBoundingClientRect();
       return getComputedStyle(el).position === 'absolute' && r.width > 0 && r.height > 0;
     }).length;
+    const el = document.querySelector('.viewport-wrap > div:not([class])');
+    const cs = el ? getComputedStyle(el) : null;
     return {
       cenaTopo: Math.round(c?.top ?? -1), barraBase: Math.round(b.bottom),
+      cenaClasse: el ? (el.className || '(sem classe)') : 'sem elemento',
+      cenaInset: cs ? `${cs.position}/${cs.top}/${cs.inset}` : '-',
+      cenaVar: cs ? cs.getPropertyValue('--barra') : '-',
       canvasLargura: Math.round((c?.width ?? 0)), canvasAltura: Math.round((c?.height ?? 0)),
       sobrepostos, wrapAltura: Math.round(wrap.height),
     };
@@ -104,7 +116,7 @@ try {
   registrar(cena.sobrepostos === 0, 'nenhum botão absoluto fica por cima do mapa', String(cena.sobrepostos));
 
   // 3) painel de propriedades com seções recolhidas
-  const secoes = await page.$$eval('.section-heading', (bs) => bs.map((b) => ({ texto: b.textContent.replace(/\s+/g, ' ').trim(), aberta: b.getAttribute('aria-expanded') })));
+  const secoes = await page.$$eval('button.section-heading', (bs) => bs.map((b) => ({ texto: b.textContent.replace(/\s+/g, ' ').trim(), aberta: b.getAttribute('aria-expanded') })));
   registrar(
     secoes.length === 4 && secoes.every((s) => s.aberta === 'false'),
     'propriedades mostra quatro seções recolhidas',
@@ -135,16 +147,17 @@ try {
   registrar(!/SEU MUNDO, SUAS HISTÓRIAS/i.test(topo), 'cabeçalho sem a linha de slogan duplicada', topo.slice(0, 70));
 
   // 5) controles da barra continuam funcionando
+  const gradeAntes = await page.$eval('[aria-label="Alternar grade (G)"]', (b) => b.getAttribute('aria-pressed'));
   await page.click('[aria-label="Alternar grade (G)"]');
   await esperar(400);
   const grade = await page.evaluate(() => ({
     pressed: document.querySelector('[aria-label="Alternar grade (G)"]')?.getAttribute('aria-pressed'),
     desfazer: !document.querySelector('[aria-label="Desfazer (Ctrl+Z)"]')?.disabled,
   }));
-  registrar(grade.pressed === 'false' && grade.desfazer, 'alternar a grade pela barra funciona e habilita desfazer', JSON.stringify(grade));
+  registrar(grade.pressed !== gradeAntes && grade.desfazer, 'alternar a grade pela barra funciona e habilita desfazer', `${gradeAntes} -> ${grade.pressed}`);
   await page.click('[aria-label="Desfazer (Ctrl+Z)"]');
   await esperar(400);
-  registrar((await page.$eval('[aria-label="Alternar grade (G)"]', (b) => b.getAttribute('aria-pressed'))) === 'true', 'desfazer restaura a grade');
+  registrar((await page.$eval('[aria-label="Alternar grade (G)"]', (b) => b.getAttribute('aria-pressed'))) === gradeAntes, 'desfazer restaura a grade', gradeAntes);
 
   // 6) régua continua no canto inferior esquerdo
   const regua = await page.evaluate(() => {
