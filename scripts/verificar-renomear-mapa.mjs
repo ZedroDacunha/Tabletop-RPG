@@ -74,9 +74,17 @@ async function campoDoMapa(page, nome) {
   throw new Error(`Cartão de "${nome}" não encontrado`);
 }
 
+async function selecionarTudo(page, campo) {
+  await campo.click();
+  await page.keyboard.down('Control');
+  await page.keyboard.press('KeyA');
+  await page.keyboard.up('Control');
+}
+
 async function digitarNoCampo(page, nome, texto) {
   const campo = await campoDoMapa(page, nome);
-  await campo.click({ clickCount: 3 });
+  await selecionarTudo(page, campo);
+  await page.keyboard.press('Backspace');
   await page.keyboard.type(texto);
   return campo;
 }
@@ -91,7 +99,8 @@ async function criarMapa(page, nome) {
   await page.click('button[aria-label="Novo mapa"]');
   await page.waitForSelector('input[placeholder^="Ex.:"]', { visible: true });
   const campo = await page.$('input[placeholder^="Ex.:"]');
-  await campo.click({ clickCount: 3 });
+  await selecionarTudo(page, campo);
+  await page.keyboard.press('Backspace');
   await page.keyboard.type(nome);
   await clicarTexto(page, 'Criar mapa');
   await page.waitForFunction(() => !document.querySelector('input[placeholder^="Ex.:"]'), { timeout: 8000 });
@@ -192,7 +201,7 @@ try {
 
   // 3) nome vazio mantém o nome anterior
   const campoSelado = await campoDoMapa(page, 'Bosque Norte');
-  await campoSelado.click({ clickCount: 3 });
+  await selecionarTudo(page, campoSelado);
   await page.keyboard.press('Backspace');
   await page.keyboard.press('Enter');
   await esperar(700);
