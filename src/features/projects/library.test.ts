@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {emptyProject,makeEntity} from './project';
-import {MAX_DOTS,NAME_MAX,copyName,newestFirst,summarise,timeAgo} from './library';
+import {MAX_DOTS,MAP_SORTS,NAME_MAX,copyName,filterProjects,newestFirst,sortProjects,summarise,timeAgo} from './library';
 
 test('the summary keeps the map identity and a small preview of the pieces',()=>{
  const p=emptyProject();p.name='Bosque';p.objects=[makeEntity('pine','A',[3,0,-4]),{...makeEntity('rock','B'),visible:false}];
@@ -47,4 +47,34 @@ test('a copy gets a free name without touching the original',()=>{
  assert.equal(long.length,NAME_MAX);
  assert.ok(long.endsWith(' (cópia)'));
  assert.ok(copyName('N'.repeat(NAME_MAX),['N'.repeat(NAME_MAX)+' (cópia)']).length<=NAME_MAX);
+});
+
+function summary(name:string,size:number,updatedAt:string){
+ const p=emptyProject();p.name=name;p.settings.size=size;
+ return {...summarise(p),id:name,updatedAt};
+}
+const maps=[summary('Ruína do portão',50,'2026-03-01T10:00:00.000Z'),summary('bosque',30,'2026-05-01T10:00:00.000Z'),summary('Acampamento',20,'2026-01-01T10:00:00.000Z')];
+
+test('the map search ignores case, accents and extra spaces',()=>{
+ assert.equal(filterProjects(maps,'').length,3);
+ assert.equal(filterProjects(maps,'   ').length,3);
+ assert.deepEqual(filterProjects(maps,'bos').map(m=>m.name),['bosque']);
+ assert.deepEqual(filterProjects(maps,'BOSQUE').map(m=>m.name),['bosque']);
+ assert.deepEqual(filterProjects(maps,'ruina').map(m=>m.name),['Ruína do portão'],'busca sem acento acha o nome acentuado');
+ assert.deepEqual(filterProjects(maps,'  portao  ').map(m=>m.name),['Ruína do portão']);
+ assert.deepEqual(filterProjects(maps,'ruína').map(m=>m.name),['Ruína do portão'],'acento digitado também funciona');
+ assert.deepEqual(filterProjects(maps,'camp').map(m=>m.name),['Acampamento'],'busca no meio da palavra');
+ assert.deepEqual(filterProjects(maps,'nada aqui').map(m=>m.name),[]);
+});
+
+test('the library sorts by date, name and map size',()=>{
+ assert.deepEqual(sortProjects(maps,'recentes').map(m=>m.name),['bosque','Ruína do portão','Acampamento']);
+ assert.deepEqual(sortProjects(maps,'nome').map(m=>m.name),['Acampamento','bosque','Ruína do portão']);
+ assert.deepEqual(sortProjects(maps,'tamanho').map(m=>m.size),[50,30,20]);
+ const same=[summary('Zona',30,'2026-01-01T10:00:00.000Z'),summary('Área',30,'2026-01-01T10:00:00.000Z'),summary('base',30,'2026-01-01T10:00:00.000Z')];
+ assert.deepEqual(sortProjects(same,'tamanho').map(m=>m.name),['Área','base','Zona'],'empate no tamanho cai no nome');
+ const original=maps.map(m=>m.name);
+ sortProjects(maps,'nome');
+ assert.deepEqual(maps.map(m=>m.name),original,'a lista original não é reordenada no lugar');
+ assert.deepEqual(MAP_SORTS.map(([id])=>id),['recentes','nome','tamanho']);
 });

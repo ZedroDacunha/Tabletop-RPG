@@ -115,3 +115,10 @@
 @media(max-width:1200px){.library-tabs{gap:12px;padding:0 12px}.library-tabs>button{font-size:10px}}
 @media(max-width:950px){.library-tabs{gap:10px;padding:0 10px}.library-tabs>button{gap:5px}.library-tabs>button svg{display:none}}
 @media(max-width:650px){.library-tabs{gap:8px;padding:0 8px}.library-tabs>button{font-size:9px}.library-tabs>button span{display:none}}
+
+/* Busca e ordem em Meus mapas */
+.map-tools{display:flex;gap:6px;margin-bottom:6px}
+.map-search{flex:1;margin:0;height:33px}
+.map-search input{font-size:11px}
+.map-sort{width:142px;height:33px;font-size:10px;padding:0 6px;border:1px solid #3a4c33;border-radius:6px;background:#1d2721;color:#b6c9a6}
+.map-count{font-size:9px;color:#8ea582;margin-bottom:8px}
