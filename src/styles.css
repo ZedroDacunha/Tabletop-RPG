@@ -117,8 +117,8 @@
 @media(max-width:650px){.library-tabs{gap:8px;padding:0 8px}.library-tabs>button{font-size:9px}.library-tabs>button span{display:none}}
 
 /* Busca e ordem em Meus mapas */
-.map-tools{display:flex;gap:6px;margin-bottom:6px}
-.map-search{flex:1;margin:0;height:33px}
+.map-tools{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.map-search{flex:1 1 100%;margin:0;height:33px}
 .map-search input{font-size:11px}
-.map-sort{width:142px;height:33px;font-size:10px;padding:0 6px;border:1px solid #3a4c33;border-radius:6px;background:#1d2721;color:#b6c9a6}
+.map-sort,.map-period{flex:1 1 0;min-width:0;height:33px;font-size:10px;padding:0 6px;border:1px solid #3a4c33;border-radius:6px;background:#1d2721;color:#b6c9a6}
 .map-count{font-size:9px;color:#8ea582;margin-bottom:8px}
