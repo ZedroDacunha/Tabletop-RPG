@@ -91,7 +91,7 @@ try {
   await clickText('Salvar vista atual');
   await page.waitForFunction(() => document.querySelectorAll('.view-row').length === 1, { timeout: 10000 });
   await sleep(1200);
-  await clickText('Vista superior');
+  await clickText('Perspectiva');
   await sleep(900);
   await clickText('Salvar vista atual');
   await page.waitForFunction(() => document.querySelectorAll('.view-row').length === 2, { timeout: 10000 });
