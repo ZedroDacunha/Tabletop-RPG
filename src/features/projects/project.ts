@@ -6,7 +6,7 @@ export const KINDS = [
  'cube','sphere','cylinder',
 ] as const;
 export type Kind = typeof KINDS[number];
-import type {Viewpoint} from '../scenes/views';
+import {MAX_TRAVEL,type Viewpoint} from '../scenes/views';
 export type Group = { id:string; name:string };
 export type {Viewpoint};
 export type Entity = { id:string; kind:Kind|'model'; assetId?:string; groupId?:string; name:string; position:Vec3; rotation:Vec3; scale:Vec3; visible:boolean; locked:boolean; color:string };
@@ -113,7 +113,7 @@ export function validateProject(raw:unknown):Project {
  else objects=objects.map(o=>{const {groupId,...rest}=o;return rest});
  const s=raw.settings;if(!object(s)||!Number.isFinite(s.size)||Number(s.size)<10||Number(s.size)>100||!Number.isFinite(s.gridSize)||Number(s.gridSize)<0.25||Number(s.gridSize)>5||typeof s.grid!=='boolean'||typeof s.snap!=='boolean'||(s.guides!==undefined&&typeof s.guides!=='boolean')||!['dawn','day','dusk','night'].includes(String(s.atmosphere))||!color(s.background))return fail('As configurações do mapa são inválidas.');
  let views:Viewpoint[]|undefined;
- if(raw.views!==undefined){if(!Array.isArray(raw.views)||raw.views.length>24)return fail('O roteiro de apresentação é inválido.');views=raw.views.map(v=>{if(!object(v)||typeof v.id!=='string'||!v.id||typeof v.name!=='string'||!v.name.trim()||v.name.length>60||!vector(v.position)||!vector(v.target))return fail('Uma vista do roteiro está inválida.');return {id:v.id,name:v.name,position:v.position,target:v.target}});if(new Set(views.map(v=>v.id)).size!==views.length)return fail('O roteiro contém vistas com identificadores repetidos.')}
+ if(raw.views!==undefined){if(!Array.isArray(raw.views)||raw.views.length>24)return fail('O roteiro de apresentação é inválido.');views=raw.views.map(v=>{if(!object(v)||typeof v.id!=='string'||!v.id||typeof v.name!=='string'||!v.name.trim()||v.name.length>60||!vector(v.position)||!vector(v.target)||(v.travel!==undefined&&(typeof v.travel!=='number'||!Number.isFinite(v.travel)||v.travel<0||v.travel>MAX_TRAVEL)))return fail('Uma vista do roteiro está inválida.');return {id:v.id,name:v.name,position:v.position,target:v.target,...(typeof v.travel==='number'?{travel:v.travel}:{})}});if(new Set(views.map(v=>v.id)).size!==views.length)return fail('O roteiro contém vistas com identificadores repetidos.')}
  const camera=raw.camera;if(camera!==undefined&&(!object(camera)||!vector(camera.position)||!vector(camera.target)))return fail('A posição da câmera é inválida.');
  return {schemaVersion:1,id:raw.id,name:raw.name,updatedAt:typeof raw.updatedAt==='string'?raw.updatedAt:new Date().toISOString(),objects,assets,settings:s as Project['settings'],...(groups?{groups}:{}),...(views?{views}:{}),...(camera?{camera:camera as Project['camera']}:{})};
 }

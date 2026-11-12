@@ -1,5 +1,5 @@
 import {Component,useEffect,useMemo,useRef,useState,Suspense,type ReactNode,type RefObject} from 'react';
-import {Canvas,useThree,type ThreeEvent} from '@react-three/fiber';
+import {Canvas,useFrame,useThree,type ThreeEvent} from '@react-three/fiber';
 import {Grid,OrbitControls,TransformControls} from '@react-three/drei';
 import type {OrbitControls as Controls} from 'three-stdlib';
 import * as THREE from 'three';
@@ -8,7 +8,7 @@ import {alignToNeighbours,nearestNeighbour,selectionCenter,type Project,type Ent
 import {CompatibleMap} from './CompatibleMap';
 import {downloadFile} from '../features/projects/storage';
 export type Tool='select'|'translate'|'rotate'|'scale';
-export type CameraCommand={id:number;type:'home'|'top'|'focus'|'image'|'view';position?:Vec3;target?:Vec3};
+export type CameraCommand={id:number;type:'home'|'top'|'focus'|'image'|'view';position?:Vec3;target?:Vec3;duration?:number};
 export type Placement={kind:Entity['kind'];name:string;assetId?:string}|null;
 export type ViewportProps={project:Project;selection:string[];tool:Tool;placement:Placement;command:CameraCommand;onSelect:(id:string|null,additive?:boolean)=>void;onPlace:(p:Vec3)=>void;onTransform:(id:string,patch:Partial<Entity>)=>void;onGroupChange:(updates:Record<string,Partial<Entity>>)=>void;onGroupEnd:()=>void;onCamera:(camera:NonNullable<Project['camera']>)=>void;onError:(msg:string)=>void};
 type Props=ViewportProps;
@@ -16,9 +16,24 @@ class SceneErrorBoundary extends Component<{children:ReactNode},{failed:boolean}
 function CameraRig({project,command,onCamera}:Pick<Props,'project'|'command'|'onCamera'>){
  const controls=useRef<Controls>(null);const {camera,gl,invalidate,scene}=useThree();const onCameraRef=useRef(onCamera);onCameraRef.current=onCamera;
  const remember=()=>{if(controls.current)onCameraRef.current({position:camera.position.toArray() as Vec3,target:controls.current.target.toArray() as Vec3})};
+ const travel=useRef<{fromPosition:THREE.Vector3;toPosition:THREE.Vector3;fromTarget:THREE.Vector3;toTarget:THREE.Vector3;start:number;duration:number}|null>(null);
+ useFrame(()=>{
+  const c=controls.current,anim=travel.current;if(!c||!anim)return;
+  const progress=anim.duration>0?Math.min(1,(performance.now()-anim.start)/anim.duration):1;
+  const eased=progress<.5?4*progress*progress*progress:1-Math.pow(-2*progress+2,3)/2;
+  camera.position.lerpVectors(anim.fromPosition,anim.toPosition,eased);
+  c.target.lerpVectors(anim.fromTarget,anim.toTarget,eased);
+  c.update();invalidate();
+  if(progress>=1){travel.current=null;c.enabled=true;remember()}
+ });
  useEffect(()=>{const c=controls.current;if(!c)return;camera.position.fromArray(project.camera?.position??[23,20,27]);c.target.fromArray(project.camera?.target??[0,0,0]);c.update();invalidate()},[project.id]);
  useEffect(()=>{const c=controls.current;if(!c||command.id===0)return;
- if(command.type==='view'&&command.position&&command.target){camera.position.fromArray(command.position);c.target.fromArray(command.target);c.update();invalidate();return;}
+ travel.current=null;c.enabled=true;
+ if(command.type==='view'&&command.position&&command.target){const duration=command.duration??0;
+  if(duration<=0){camera.position.fromArray(command.position);c.target.fromArray(command.target);c.update();invalidate();remember();return}
+  travel.current={fromPosition:camera.position.clone(),toPosition:new THREE.Vector3(...command.position),fromTarget:c.target.clone(),toTarget:new THREE.Vector3(...command.target),start:performance.now(),duration};
+  c.enabled=false;invalidate();return;
+ }
  if(command.type==='image'){gl.render(scene,camera);gl.domElement.toBlob(blob=>{if(blob)downloadFile(blob,`${project.name}.png`)});return;}
  const target=command.type==='focus'&&command.position?new THREE.Vector3(...command.position):new THREE.Vector3(0,0,0);c.target.copy(target);
  if(command.type==='top')camera.position.copy(target).add(new THREE.Vector3(.001,project.settings.size*1.3,.001));
