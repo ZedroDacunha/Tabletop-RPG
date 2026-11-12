@@ -2,7 +2,7 @@
 
 Notas de `Melhorias e Atualizações/`, escritas a partir do modelo em [[Melhorias e Atualizações]].
 
-Total: **29** notas.
+Total: **30** notas.
 
 ---
 
@@ -18,7 +18,7 @@ O repositório salta de #2 para #51: as PRs #3–#50 não existem, então a base
 - [[MEL-024 - Modo de compatibilidade sem WebGL]] — concluída — Sem WebGL (máquina virtual, navegador restrito, driver bloqueado), o editor abre um mapa esquemático em SVG isométrico: dá para selecionar, posicionar, editar propriedades e exportar a imagem — sem prometer 3D.
 - [[MEL-025 - Publicação automática e recarga no dev]] — concluída — Todo `push` na `main` compila, testa e publica o site no GitHub Pages; e o `npm run dev` recarrega a página a cada mudança, inclusive pela prévia remota.
 
-## Editor de mapas (PRs #51–#92)
+## Editor de mapas (PRs #51–#94)
 
 - [[MEL-001 - Ambiência e acervo de 32 peças]] — concluída — A cena deixou de ser um plano cinza: ganhou céu em gradiente, sol ou lua, estrelas, colinas no horizonte, névoa e chão com textura — e o catálogo foi para 32 peças 3D divididas em cinco categorias.
 - [[MEL-002 - Gizmo preso ao objeto selecionado]] — concluída — Mover, girar e escalar passaram a ter alças 3D (`TransformControls`) ancoradas na peça selecionada, discretas e com encaixe na grade.
@@ -42,6 +42,7 @@ O repositório salta de #2 para #51: as PRs #3–#50 não existem, então a base
 - [[MEL-027 - Barra do viewport agrupada por função]] — concluída — As ações do viewport passaram a ficar em cinco grupos nomeados — `Ferramentas`, `Histórico`, `Câmera`, `Visualização` e `Saída` — em vez de nove ícones espalhados em três cantos, com divisórias inconsistentes e um botão de câmera que parecia abrir menu.
 - [[MEL-028 - Filtro por período em Meus mapas]] — concluída — A biblioteca de mapas ganhou filtro por período — `Qualquer data`, `Últimos 7 dias` e `Últimos 30 dias` — que se combina com a busca por nome e com a ordenação por recentes, nome ou tamanho.
 - [[MEL-029 - Barra compacta com menu Mais ações em telas estreitas]] — concluída — Abaixo de 650 px a barra do viewport deixa de encolher até virar um risco de ícones: fica só o grupo `Ferramentas` e um botão `Mais ações`, que abre num menu o histórico, a câmera, a visualização e a saída — com o estado das alternâncias anunciado por `aria-checked`.
+- [[MEL-030 - Cabeçalho compacto com menu Mais em telas estreitas]] — concluída — Abaixo de 650 px as ações do topo deixam de ser ícones sem rótulo: elas se juntam num menu `Mais` com as cinco ações escritas por extenso e uma linha de ajuda cada. `Salvar mapa` continua na barra.
 
 ## Como adicionar uma nota
 
