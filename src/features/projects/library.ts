@@ -28,3 +28,15 @@ export function timeAgo(iso:string,now=Date.now()):string{
  const date=new Date(then);
  return `${String(date.getDate()).padStart(2,'0')}/${String(date.getMonth()+1).padStart(2,'0')}/${date.getFullYear()}`;
 }
+
+export const NAME_MAX=80;
+export function copyName(name:string, taken:Iterable<string>):string{
+ const used=new Set(Array.from(taken,n=>n.trim().toLocaleLowerCase('pt-BR')));
+ const cleaned=(name.trim()||'Mapa').replace(/\s*\(cópia(?:\s+\d+)?\)$/i,'').trim()||'Mapa';
+ for(let n=1;n<1000;n++){
+  const suffix=n===1?' (cópia)':` (cópia ${n})`;
+  const candidate=cleaned.slice(0,Math.max(1,NAME_MAX-suffix.length)).trimEnd()+suffix;
+  if(!used.has(candidate.toLocaleLowerCase('pt-BR')))return candidate;
+ }
+ return cleaned.slice(0,NAME_MAX);
+}

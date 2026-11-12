@@ -1,0 +1,44 @@
+name: Verificar duplicação de mapas
+
+on:
+  push:
+    branches: [arena/27f00f4d-tabletop-rpg]
+  workflow_dispatch:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Preparar o Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Rodar os testes
+        run: npm test
+
+      - name: Compilar o site
+        run: npm run build
+
+      - name: Instalar o puppeteer-core
+        run: npm install --no-save puppeteer-core
+
+      - name: Verificar a duplicação no navegador
+        env:
+          CHROME: /usr/bin/google-chrome
+        run: node scripts/verificar-duplicar.mjs
+
+      - name: Guardar as capturas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: capturas
+          path: capturas
+          if-no-files-found: warn
