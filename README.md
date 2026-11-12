@@ -39,6 +39,7 @@ O build publicado leva de 1 a 2 minutos para aparecer no ar. O GitHub Pages prec
 - **Grupos**: `Ctrl/Cmd + G` agrupa a seleção num grupo nomeado (o nome pode ser trocado no painel de propriedades) e `Ctrl/Cmd + Shift + G` desfaz. Na aba Cena o grupo aparece como uma pasta recolhível com a contagem de peças; clicar no nome seleciona o grupo inteiro e o gizmo age nele como uma peça única. Duplicar um grupo cria um grupo novo com as cópias, e o grupo desaparece sozinho quando a última peça sai.
 - **Alinhamento em lote** (painel de seleção múltipla): `Alinhar X/Y/Z` põe todas as peças na mesma linha, usando a primeira peça destravada da seleção como referência; `Distribuir X/Z` espalha três ou mais peças com espaçamento igual entre as extremas. Peças travadas ficam onde estão.
 - **Trechos** (`.trecho`): com peças selecionadas, `Exportar trecho` baixa um arquivo só com elas — mais os grupos a que pertencem e os modelos 3D que usam. No outro mapa, `Importar trecho` na biblioteca cola o conjunto assentado num ponto livre, já selecionado, com grupos e nomes preservados e tudo em um passo de desfazer.
+- **Meus trechos** (rodapé da biblioteca): a seleção vira um bloco salvo no navegador — `Salvar trecho` no painel de seleção múltipla — e volta com `Colar` em qualquer mapa, sem passar por arquivo. Cada trecho guarda peças, grupos e modelos 3D, mostra a miniatura, quantas peças tem e de qual mapa veio, e pode ser renomeado (Enter confirma) ou excluído. O navegador guarda até 20 trechos.
 - **Roteiro de apresentação**: o painel de propriedades tem uma seção Roteiro onde você salva a vista atual da câmera, renomeia ("Vista do portão") e navega com um clique. No modo apresentação o roteiro aparece como uma pílula no rodapé: `←`/`→` ou as setas da pílula passam de uma vista para outra, com o nome da cena e a posição no roteiro. As vistas viajam no `.tabletop` e no salvamento automático.
 - **Modo apresentação** (`P`): tela cheia só com a cena — sem cabeçalho, biblioteca, painel de propriedades, barras de ferramentas ou rodapé. Botão direito orbita, scroll aproxima; `Esc` ou `P` volta ao editor. O botão de apresentação fica no topo, ao lado de exportar.
 - **Seleção múltipla**: Shift + clique (ou Ctrl/Cmd + clique) soma e retira peças no mapa e na lista da Cena; Ctrl/Cmd + A seleciona todas. As peças selecionadas ganham anel, e o gizmo aparece no centro do grupo para arrastar, girar ou escalar tudo junto. Setas, `Ctrl+D` e `Delete` valem para a seleção inteira, e o painel mostra as ações do conjunto (focar, duplicar, travar, remover).
@@ -85,7 +86,7 @@ Clique em uma peça da biblioteca e depois no chão do mapa. As ferramentas 3D o
 
 O protótipo mantém **um mapa atual por navegador/origem**. Não há conta, banco em nuvem ou sincronização entre dispositivos. Exporte o projeto antes de substituir o mapa atual ou limpar os dados do navegador. O arquivo `.tabletop` inclui os modelos; a exportação de imagem não permite reeditar o mapa. Prévia local e site publicado possuem armazenamento separado.
 
-Limites de validação: 1.500 objetos, 80 modelos por mapa, 25 MB por modelo incorporado, 60 MB/64 arquivos por lote de importação e 100 MB por projeto aberto. Estes são limites de arquivo, não uma garantia de desempenho. Modelos complexos podem exigir menos objetos e mais memória. Texturas externas devem acompanhar o glTF. Draco, Meshopt, KTX2 e animação de personagens não fazem parte desta versão.
+Limites de validação: 1.500 objetos, 80 modelos por mapa, 25 MB por modelo incorporado, 60 MB/64 arquivos por lote de importação e 100 MB por projeto aberto. A biblioteca de trechos aceita até 20 trechos salvos, com 1.500 peças cada. Estes são limites de arquivo, não uma garantia de desempenho. Modelos complexos podem exigir menos objetos e mais memória. Texturas externas devem acompanhar o glTF. Draco, Meshopt, KTX2 e animação de personagens não fazem parte desta versão.
 
 O mapa é renderizado sob demanda, com resolução limitada a 1,5× e sombras de 2048 px. As colinas do horizonte e o céu são gerados no navegador, sem assets externos, e não fazem parte do mapa editável (não podem ser selecionadas nem exportadas). Os modelos não são enviados a um servidor pelo aplicativo. Fontes de interface usam Google Fonts, com fontes locais alternativas.
 
@@ -106,7 +107,7 @@ React 19, TypeScript, Vite, Three.js, React Three Fiber e Drei. Assets nativos e
 ## Próximas etapas
 
 1. Validar câmera, gizmos e desempenho em notebooks com GPU integrada e dedicada.
-2. Adicionar galeria de vários mapas e miniaturas.
+2. Adicionar busca e ordenação em Meus mapas e transições suaves entre as vistas do roteiro.
 3. Introduzir entidade de personagem com nome, miniatura e atributos, separada dos objetos de cenário.
 4. Depois, animações, movimentação, ficha, fog of war e sessões compartilhadas com permissões.
 

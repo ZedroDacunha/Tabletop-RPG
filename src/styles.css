@@ -90,3 +90,10 @@
 .showcase-views small{color:#9db590;font-size:8px}
 .showcase-views button{width:22px;height:22px;border-radius:50%;border:1px solid #56684a;color:#dcecc6;font-size:12px;line-height:1;display:flex;align-items:center;justify-content:center}
 .showcase-views button:hover{background:#31452c}
+
+/* Meus trechos */
+.trecho-row{display:flex;flex-direction:column;gap:6px;margin-bottom:6px}
+.trecho-row .trecho-button{width:100%;margin-bottom:0}
+.snippet-name{width:100%;background:none;border:0;border-radius:0;padding:0;font-size:11px;font-weight:550;color:#e6ebdf}
+.snippet-name:hover{color:#ecf4e3}
+.map-card .snippet-name:focus{border-color:transparent!important;color:#fff}
