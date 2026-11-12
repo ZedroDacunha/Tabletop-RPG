@@ -65,9 +65,8 @@ try {
 
   // carrega o cenário de exemplo para ter conteúdo na cena
   await page.evaluate(() => [...document.querySelectorAll('.empty-world button')].find((b) => b.textContent.includes('exemplo'))?.click());
-  await page.waitForSelector('.modal-heading h2', { visible: true });
-  await page.evaluate(() => [...document.querySelectorAll('.modal-actions button')].find((b) => /Abrir|Exemplo|Cenário/i.test(b.textContent))?.click());
-  await esperar(3000);
+  await page.waitForSelector('.scene-row', { timeout: 60000 });
+  await esperar(2500);
   await page.evaluate(() => document.querySelector('.scene-select')?.click());
   await esperar(1200);
 
