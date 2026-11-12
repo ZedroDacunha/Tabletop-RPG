@@ -2,9 +2,23 @@
 
 Notas de `Melhorias e Atualizações/`, escritas a partir do modelo em [[Melhorias e Atualizações]].
 
-Total: **18** notas.
+Total: **25** notas.
 
 ---
+
+## Base do projeto (PRs #1–#2)
+
+O repositório salta de #2 para #51: as PRs #3–#50 não existem, então a base está documentada por funcionalidade, com a PR de origem em cada nota.
+
+- [[MEL-019 - Editor 3D base do projeto]] — concluída — O protótipo que deu origem a tudo: editor de mapas 3D no navegador em React + Three.js, com biblioteca de 15 peças, câmera orbital, grade com snap, ferramentas de transformação, painel de propriedades, cenário de exemplo e salvamento local.
+- [[MEL-020 - Importação de modelos 3D GLB e glTF]] — concluída — Dá para trazer modelos próprios para o mapa: GLB autocontido ou glTF com seus `.bin` e texturas selecionados juntos. O modelo é **incorporado** ao projeto (texturas incluídas), então o mapa continua abrindo sozinho depois de exportado.
+- [[MEL-021 - Salvamento local, autosave e arquivo .tabletop]] — concluída — O mapa se salva sozinho no navegador (IndexedDB) enquanto você edita, e pode ser exportado/importado como arquivo `.tabletop` com modelos incorporados.
+- [[MEL-022 - Desfazer e refazer com histórico limitado]] — concluída — `Ctrl`/`⌘` + `Z` desfaz e `Ctrl`/`⌘` + `Shift` + `Z` refaz, com até **40 estados** por mapa; cada ação da interface vira um passo, e o histórico é zera em cada mapa aberto.
+- [[MEL-023 - Câmera orbital, vistas de topo e exportar imagem]] — concluída — Câmera orbital com painel e rotação no botão direito, alternância perspectiva/topo, "centralizar", foco na peça selecionada (`F`) e exportação do mapa como imagem (`PNG` no 3D, `SVG` no modo compatível).
+- [[MEL-024 - Modo de compatibilidade sem WebGL]] — concluída — Sem WebGL (máquina virtual, navegador restrito, driver bloqueado), o editor abre um mapa esquemático em SVG isométrico: dá para selecionar, posicionar, editar propriedades e exportar a imagem — sem prometer 3D.
+- [[MEL-025 - Publicação automática e recarga no dev]] — concluída — Todo `push` na `main` compila, testa e publica o site no GitHub Pages; e o `npm run dev` recarrega a página a cada mudança, inclusive pela prévia remota.
+
+## Editor de mapas (PRs #51–#86)
 
 - [[MEL-001 - Ambiência e acervo de 32 peças]] — concluída — A cena deixou de ser um plano cinza: ganhou céu em gradiente, sol ou lua, estrelas, colinas no horizonte, névoa e chão com textura — e o catálogo foi para 32 peças 3D divididas em cinco categorias.
 - [[MEL-002 - Gizmo preso ao objeto selecionado]] — concluída — Mover, girar e escalar passaram a ter alças 3D (`TransformControls`) ancoradas na peça selecionada, discretas e com encaixe na grade.
@@ -28,6 +42,6 @@ Total: **18** notas.
 ## Como adicionar uma nota
 
 1. Copie o modelo de `Melhorias e Atualizações/Melhorias e Atualizações.md`.
-2. Salve como `Melhorias-XXX - título curto.md` com o próximo número livre.
+2. Salve como `MEL-XXX - título curto.md` com o próximo número livre.
 3. Preencha o frontmatter, sem `#` nas tags.
-4. Acrescente a linha da nota nesta lista: `- [[MEL-XXX - título]] — status — resumo em 1 linha`.
+4. Acrescente a linha da nota no bloco correspondente: `- [[MEL-XXX - título]] — status — resumo em 1 linha`.
