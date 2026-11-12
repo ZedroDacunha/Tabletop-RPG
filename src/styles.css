@@ -102,11 +102,14 @@
 .library-action b{background:#3b5230;color:#cfe5b6;font-weight:600;font-size:8px;border-radius:8px;padding:1px 6px}
 .library-import{position:relative;flex:1;display:flex}
 .library-import .library-action{width:100%}
-.import-menu{position:absolute;bottom:calc(100% + 7px);left:auto;right:0;width:calc(200% + 6px);z-index:40;background:#212d23;border:1px solid #4f6342;border-radius:8px;box-shadow:0 14px 34px #0008;padding:5px;display:flex;flex-direction:column;gap:3px}
-.import-menu button{display:flex;align-items:center;gap:9px;text-align:left;padding:9px;border-radius:5px;color:#c3d6b0;font-size:10px}
-.import-menu button:hover:not(:disabled){background:#2d3d28;color:#e6f5d3}
-.import-menu span{display:flex;flex-direction:column;gap:1px;min-width:0}
-.import-menu small{font-size:8px;color:#8ba07d}
+.menu-panel{background:#212d23;border:1px solid #4f6342;border-radius:8px;box-shadow:0 14px 34px #0008;padding:5px;display:flex;flex-direction:column;gap:3px}
+.menu-panel button{display:flex;align-items:center;gap:9px;text-align:left;padding:9px;border-radius:5px;color:#c3d6b0;font-size:10px}
+.menu-panel button:hover:not(:disabled){background:#2d3d28;color:#e6f5d3}
+.menu-panel span{display:flex;flex-direction:column;gap:1px;min-width:0}
+.menu-panel small{font-size:8px;color:#8ba07d}
+.import-menu{position:absolute;bottom:calc(100% + 7px);left:auto;right:0;width:calc(200% + 6px);z-index:40}
+.header-file{position:relative}
+.header-menu{position:absolute;top:calc(100% + 8px);right:0;width:236px;z-index:60}
 
 /* Abas da biblioteca em telas estreitas: sem ícones nem contadores */
 @media(max-width:1200px){.library-tabs{gap:12px;padding:0 12px}.library-tabs>button{font-size:10px}}
