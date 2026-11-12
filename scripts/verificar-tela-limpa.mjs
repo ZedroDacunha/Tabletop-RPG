@@ -159,7 +159,9 @@ try {
   await esperar(400);
   registrar((await page.$eval('[aria-label="Alternar grade (G)"]', (b) => b.getAttribute('aria-pressed'))) === gradeAntes, 'desfazer restaura a grade', gradeAntes);
 
-  // 6) régua continua no canto inferior esquerdo
+  // 6) régua continua no canto inferior esquerdo (volta ao selecionar de novo)
+  await page.evaluate(() => document.querySelector('.scene-select')?.click());
+  await esperar(500);
   const regua = await page.evaluate(() => {
     const r = document.querySelector('.viewport-bottom-left');
     const wrap = document.querySelector('.viewport-wrap').getBoundingClientRect();
