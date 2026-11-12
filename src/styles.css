@@ -92,9 +92,8 @@
 .showcase-views button:hover{background:#31452c}
 
 /* Meus trechos */
-.trecho-row{display:flex;gap:6px}
-.trecho-row .trecho-button{flex:1;min-width:0}
-.trecho-row .trecho-button.file{flex:0 0 auto}
+.trecho-row{display:flex;flex-direction:column;gap:6px;margin-bottom:6px}
+.trecho-row .trecho-button{width:100%;margin-bottom:0}
 .snippet-name{width:100%;background:none;border:0;border-radius:0;padding:0;font-size:11px;font-weight:550;color:#e6ebdf}
 .snippet-name:hover{color:#ecf4e3}
 .map-card .snippet-name:focus{border-color:transparent!important;color:#fff}
