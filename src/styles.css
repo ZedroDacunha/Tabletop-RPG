@@ -108,7 +108,7 @@
 .menu-panel span{display:flex;flex-direction:column;gap:1px;min-width:0}
 .menu-panel small{font-size:8px;color:#8ba07d}
 .import-menu{position:absolute;bottom:calc(100% + 7px);left:auto;right:0;width:calc(200% + 6px);z-index:40}
-.header-file{position:relative}
+.header-file{position:relative;display:flex}
 .header-menu{position:absolute;top:calc(100% + 8px);right:0;width:236px;z-index:60}
 
 /* Abas da biblioteca em telas estreitas: sem ícones nem contadores */
