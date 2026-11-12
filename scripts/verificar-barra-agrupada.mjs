@@ -167,21 +167,53 @@ try {
   await page.click('.view-toggle');
   await esperar(400);
 
-  // 5) histórico: desfazer começa desligado e liga depois de uma ação
-  const desfazerInicial = await page.$eval('button[aria-label="Desfazer (Ctrl+Z)"]', (b) => b.disabled);
-  registrar(desfazerInicial === true, 'desfazer começa desabilitado', String(desfazerInicial));
+  // 5) histórico: desfazer/refazer conversam com uma ação do grupo Visualização
+  const estadoHistorico = () =>
+    page.evaluate(() => ({
+      desfazer: document.querySelector('button[aria-label="Desfazer (Ctrl+Z)"]')?.disabled,
+      refazer: document.querySelector('button[aria-label="Refazer (Ctrl+Shift+Z)"]')?.disabled,
+    }));
+  const inicial = await estadoHistorico();
+  registrar(
+    inicial.desfazer === true && inicial.refazer === true,
+    'desfazer e refazer começam desabilitados',
+    JSON.stringify(inicial),
+  );
+
+  const grade = () => page.$eval('button[aria-label="Alternar grade (G)"]', (b) => b.getAttribute('aria-pressed'));
+  const gradeAntes = await grade();
+  await page.click('button[aria-label="Alternar grade (G)"]');
+  await page.waitForFunction(
+    () => !document.querySelector('button[aria-label="Desfazer (Ctrl+Z)"]')?.disabled,
+    { timeout: 8000 },
+  );
+  const gradeDepois = await grade();
+  registrar(
+    gradeAntes === 'true' && gradeDepois === 'false' && (await estadoHistorico()).desfazer === false,
+    'ação no grupo Visualização habilita o desfazer',
+    `grade ${gradeAntes} → ${gradeDepois}`,
+  );
+
+  await page.click('button[aria-label="Desfazer (Ctrl+Z)"]');
+  await page.waitForFunction(
+    () => document.querySelector('button[aria-label="Alternar grade (G)"]')?.getAttribute('aria-pressed') === 'true',
+    { timeout: 8000 },
+  );
+  const depoisDesfazer = await estadoHistorico();
+  registrar(
+    (await grade()) === 'true' && depoisDesfazer.refazer === false,
+    'desfazer restaura a grade e habilita o refazer',
+    `refazer desabilitado: ${depoisDesfazer.refazer}`,
+  );
+
+  // cena de exemplo só para as capturas
   await page.evaluate(() => {
     const botao = [...document.querySelectorAll('button')].find((b) =>
       b.textContent.replace(/\s+/g, ' ').includes('Explorar mapa de exemplo'),
     );
     botao?.click();
   });
-  await page.waitForFunction(
-    () => !document.querySelector('button[aria-label="Desfazer (Ctrl+Z)"]')?.disabled,
-    { timeout: 20000 },
-  );
-  registrar(true, 'desfazer habilita depois de abrir o mapa de exemplo');
-  await esperar(2500);
+  await esperar(3000);
 
   // 6) os grupos não se sobrepõem e ficam dentro do viewport
   const medidas = await caixas(page);
