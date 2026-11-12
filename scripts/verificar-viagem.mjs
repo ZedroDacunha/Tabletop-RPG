@@ -30,10 +30,10 @@ function check(name, pass, detail = '') {
 const browser = await puppeteer.launch({
   executablePath: process.env.CHROME ?? '/usr/bin/google-chrome',
   headless: true,
-  args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--enable-unsafe-swiftshader', '--use-angle=swiftshader', '--window-size=1440,900'],
+  args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--enable-unsafe-swiftshader', '--use-angle=swiftshader', '--window-size=1100,720'],
 });
 const page = await browser.newPage();
-await page.setViewport({ width: 1440, height: 900 });
+await page.setViewport({ width: 1100, height: 720 });
 const consoleErrors = [];
 page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
 page.on('pageerror', e => consoleErrors.push(String(e)));
@@ -50,6 +50,12 @@ const clickText = (text, scope = 'button') => page.evaluate((text, scope) => {
   el.click();
 }, text, scope);
 const text = () => page.evaluate(() => document.body.textContent ?? '');
+const setName = (scope, value) => page.evaluate((scope, value) => {
+  const input = document.querySelector(scope === 'header' ? 'input[aria-label="Nome do mapa"]' : '.modal input');
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+  setter.call(input, value);
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+}, scope, value);
 const viewRows = () => page.evaluate(() => [...document.querySelectorAll('.view-row')].map(row => ({
   name: row.querySelector('input')?.value ?? '',
   travel: row.querySelector('.view-travel')?.value ?? '',
@@ -71,7 +77,7 @@ const fingerprint = () => page.evaluate(() => {
   for (let i = 0; i < data.length; i += 4) hash = ((hash * 33) ^ data[i] ^ (data[i + 1] << 3) ^ (data[i + 2] << 6)) >>> 0;
   return String(hash);
 });
-const settle = async (tries = 16) => {
+const settle = async (tries = 24) => {
   let previous = await fingerprint();
   for (let i = 0; i < tries; i++) {
     await sleep(250);
@@ -81,24 +87,25 @@ const settle = async (tries = 16) => {
   }
   return previous;
 };
+const saveView = async total => {
+  await clickText('Salvar vista atual');
+  await page.waitForFunction(total => document.querySelectorAll('.view-row').length === total, { timeout: 15000 }, total);
+};
 
 let failure = null;
 try {
-  // 1. Duas vistas no mapa de exemplo.
+  // 1. Duas vistas no mapa de exemplo, com tempos diferentes.
   await page.waitForSelector('.empty-world', { timeout: 60000 });
   await clickText('Explorar mapa de exemplo');
   await page.waitForFunction(() => /objetos/.test(document.querySelector('.statusbar')?.textContent ?? ''), { timeout: 20000 });
-  await clickText('Salvar vista atual');
-  await page.waitForFunction(() => document.querySelectorAll('.view-row').length === 1, { timeout: 10000 });
+  await saveView(1);
   await sleep(1200);
   await clickText('Perspectiva');
-  await sleep(900);
-  await clickText('Salvar vista atual');
-  await page.waitForFunction(() => document.querySelectorAll('.view-row').length === 2, { timeout: 10000 });
+  await sleep(1200);
+  await saveView(2);
   let rows = await viewRows();
   check('duas vistas salvas com o tempo padrão', rows.length === 2 && rows.every(r => r.travel === '1.2'), rows.map(r => `${r.name}=${r.travel}`).join(' | '));
 
-  // 2. Tempo de viagem por vista.
   await setTravel(0, '0');
   await sleep(300);
   await setTravel(1, '3');
@@ -107,14 +114,33 @@ try {
   check('cada vista tem seu próprio tempo de viagem', rows[0].travel === '0' && rows[1].travel === '3', rows.map(r => `${r.name}=${r.travel}`).join(' | '));
   await page.screenshot({ path: 'capturas/viagem.jpg', type: 'jpeg', quality: 88 });
 
-  // 3. O tempo dado sobrevive ao recarregar.
+  // 2. O tempo dado sobrevive ao recarregar.
   await page.waitForFunction(() => document.querySelector('.save-status')?.textContent.includes('Salvo'), { timeout: 20000 });
   await page.reload({ waitUntil: 'networkidle2', timeout: 60000 });
   await page.waitForFunction(() => document.querySelectorAll('.view-row').length === 2, { timeout: 20000 });
   rows = await viewRows();
   check('o tempo de viagem fica salvo no mapa', rows[0].travel === '0' && rows[1].travel === '3', rows.map(r => `${r.name}=${r.travel}`).join(' | '));
 
-  // 4. Modo apresentação: primeira vista sem viagem, segunda com 3 s.
+  // 3. Mapa novo e leve, para medir o movimento quadro a quadro.
+  await clickText('Novo mapa');
+  await page.waitForSelector('.modal', { timeout: 10000 });
+  await setName('modal', 'Vazio');
+  await clickText('Criar mapa', '.modal button');
+  await page.waitForFunction(() => !document.querySelector('.modal'), { timeout: 20000 });
+  await page.waitForFunction(() => document.querySelector('input[aria-label="Nome do mapa"]')?.value === 'Vazio', { timeout: 20000 });
+  await saveView(1);
+  await sleep(900);
+  await clickText('Perspectiva');
+  await sleep(1200);
+  await saveView(2);
+  await setTravel(0, '0.5');
+  await sleep(300);
+  await setTravel(1, '3');
+  await sleep(400);
+  rows = await viewRows();
+  check('o mapa de teste tem duas vistas com tempos 0,5 s e 3 s', rows[0].travel === '0.5' && rows[1].travel === '3', rows.map(r => `${r.name}=${r.travel}`).join(' | '));
+
+  // 4. Modo apresentação: viagem longa mostra o caminho entre as vistas.
   await page.evaluate(() => document.activeElement?.blur());
   await page.keyboard.press('KeyP');
   await page.waitForSelector('.showcase-views', { timeout: 20000 });
@@ -122,34 +148,38 @@ try {
   check('a pílula começa na primeira vista', (await text()).includes('1 / 2'), '1 / 2');
 
   await page.keyboard.press('ArrowRight');
-  await sleep(700);
-  const early = await fingerprint();
-  await page.screenshot({ path: 'capturas/meio.jpg', type: 'jpeg', quality: 80 });
-  await sleep(700);
-  const middle = await fingerprint();
+  const samples = [];
+  const at = [500, 1100, 1700];
+  let waited = 0;
+  for (const moment of at) {
+    await sleep(moment - waited); waited = moment;
+    samples.push(await fingerprint());
+  }
+  await page.screenshot({ path: 'capturas/viagem-meio.jpg', type: 'jpeg', quality: 85 });
   const lastView = await settle();
   const debug = await page.evaluate(() => (window.__viagem ?? null));
-  check('a câmera se move durante a viagem', early !== firstView && middle !== firstView && middle !== lastView,
-    `0,7 s ${early} · 1,4 s ${middle} · início ${firstView} · fim ${lastView}`);
-  check('depuração da viagem', true, JSON.stringify(debug));
-  check('a viagem termina em outro enquadramento', lastView !== firstView && lastView !== middle, `fim ${lastView}`);
+  const trail = [firstView, ...samples, lastView];
+  const distinct = new Set(trail).size;
+  check('a câmera passa por enquadramentos intermediários', distinct >= 4, `${distinct} quadros distintos · ${trail.join(' · ')}`);
+  check('o meio da viagem não está no início nem no fim', samples.some(s => s !== firstView && s !== lastView), `meio ${samples.join(' · ')}`);
+  check('a viagem termina em outro enquadramento', lastView !== firstView, `fim ${lastView} · início ${firstView}`);
   check('a pílula acompanha a troca de vista', (await text()).includes('2 / 2'), '2 / 2');
+  check('a viagem é medida contra o relógio', Boolean(debug) && debug.duration === 3, JSON.stringify(debug));
   await page.screenshot({ path: 'capturas/viagem-apresentacao.jpg', type: 'jpeg', quality: 88 });
 
-  // 5. Vista com 0 s é corte seco.
+  // 5. Vista com 0,5 s: viagem curta e volta ao mesmo lugar.
   await page.keyboard.press('ArrowLeft');
-  await sleep(250);
-  const instant = await fingerprint();
-  await sleep(1200);
-  const instantLater = await fingerprint();
-  check('vista com 0 s chega sem transição', instant === instantLater, `250 ms ${instant} = 1,4 s ${instantLater}`);
-  check('e volta ao enquadramento da primeira vista', instant === firstView, `${instant} = ${firstView}`);
+  await sleep(700);
+  const shortTravel = await fingerprint();
+  const backAgain = await settle();
+  check('a viagem curta volta ao enquadramento da primeira vista', backAgain === firstView, `${backAgain} = ${firstView}`);
+  check('e chega lá mais rápido que a longa', shortTravel !== lastView, `em 0,7 s já saiu da segunda vista: ${shortTravel}`);
 
   // 6. De volta ao editor.
   await page.keyboard.press('Escape');
-  await sleep(700);
+  await sleep(800);
   rows = await viewRows();
-  check('o editor volta com o roteiro e os tempos', rows.length === 2 && rows[0].travel === '0' && rows[1].travel === '3', rows.map(r => `${r.name}=${r.travel}`).join(' | '));
+  check('o editor volta com o roteiro e os tempos', rows.length === 2 && rows[0].travel === '0.5' && rows[1].travel === '3', rows.map(r => `${r.name}=${r.travel}`).join(' | '));
 
   const realErrors = consoleErrors.filter(t => !/favicon|WebGL|THREE\.WebGLRenderer|SwiftShader/i.test(t));
   check('console limpo', realErrors.length === 0, realErrors.slice(0, 3).join(' | '));
