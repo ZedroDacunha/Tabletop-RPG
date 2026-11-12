@@ -174,8 +174,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300,
-    "collapsed": true
+    "width": 300
   },
   "left-ribbon": {
     "hiddenItems": {
@@ -188,12 +187,12 @@
       "bases:Criar nova base": false
     }
   },
-  "active": "c573b631de65107c",
+  "active": "c1ae1f17fbff6a68",
   "lastOpenFiles": [
-    "Sem título.md",
+    "Bugs e soluções/Bugs e soluçoes.md",
     "Melhorias e Atualizações/Melhorias e Atualizações.md",
-    "BUGS/Bugs e soluçoes.md",
+    "Sem título.md",
     "Melhorias e Atualizações",
-    "BUGS"
+    "Bugs e soluções"
   ]
 }
