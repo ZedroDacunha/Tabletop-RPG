@@ -206,6 +206,23 @@ try {
   registrar(estreito.barraInteira && estreito.maisVisivel, 'em 600 px a barra cabe e "Mais ações" recebe o clique', JSON.stringify(estreito));
   registrar(estreito.inspDepoisDaBarra, 'em 600 px as propriedades começam abaixo da barra', `${estreito.inspTopo} >= ${estreito.barraBase}`);
   registrar(estreito.estouro <= 0, 'sem estouro horizontal em 600 px', String(estreito.estouro));
+  // 9) 600 px numa carga nova: a gaveta de propriedades começa fechada e a cena usa a largura toda
+  await page.reload({ waitUntil: 'networkidle2' });
+  await esperar(4500);
+  const cargaEstreita = await page.evaluate(() => {
+    const wrap = document.querySelector('.viewport-wrap').getBoundingClientRect();
+    const barra = document.querySelector('.canvas-bar').getBoundingClientRect();
+    return {
+      gaveta: Boolean(document.querySelector('.inspector')),
+      canvasLargura: Math.round(wrap.width), barraLargura: Math.round(barra.width),
+      sobra: Math.round(wrap.width - barra.width),
+    };
+  });
+  registrar(
+    cargaEstreita.gaveta === false && cargaEstreita.barraLargura === cargaEstreita.canvasLargura,
+    'em 600 px a carga nova deixa a cena inteira e a gaveta fechada',
+    JSON.stringify(cargaEstreita),
+  );
   await page.screenshot({ path: path.join(capturas, 'tela-depois-600.jpg'), type: 'jpeg', quality: 84 });
   registrar(true, 'captura em 600 px');
 
