@@ -43,7 +43,7 @@ O build publicado leva de 1 a 2 minutos para aparecer no ar. O GitHub Pages prec
 
 - Cena vazia ou cenário de exemplo com 67 objetos.
 - Câmera orbital, deslocamento, zoom, vista superior e foco no objeto.
-- Biblioteca de 32 peças: árvores (pinheiro, carvalho, bétula, árvore seca), vegetação rasteira, rochas, lagoa, cristais, ruínas (muralha, arco, torre, coluna, escadaria, santuário), estruturas (poço, cerca, ponte), acampamento (tenda, fogueira, lanterna, estandarte, caixote, barril, carrinho, baú), decoração (estátua, piso de pedra) e formas básicas.
+- Biblioteca de **64 peças**, organizada em oito categorias e tipos específicos. Inclui 32 novos modelos detalhados, com ferragens, tábuas, telhas, livros, utensílios, mobiliário, vegetação e peças de masmorra.
 - Inserir, selecionar, mover, rotacionar, escalar, duplicar, ocultar, travar e remover objetos.
 - **Grupos**: `Ctrl/Cmd + G` agrupa a seleção num grupo nomeado (o nome pode ser trocado no painel de propriedades) e `Ctrl/Cmd + Shift + G` desfaz. Na aba Cena o grupo aparece como uma pasta recolhível com a contagem de peças; clicar no nome seleciona o grupo inteiro e o gizmo age nele como uma peça única. Duplicar um grupo cria um grupo novo com as cópias, e o grupo desaparece sozinho quando a última peça sai.
 - **Alinhamento em lote** (painel de seleção múltipla): `Alinhar X/Y/Z` põe todas as peças na mesma linha, usando a primeira peça destravada da seleção como referência; `Distribuir X/Z` espalha três ou mais peças com espaçamento igual entre as extremas. Peças travadas ficam onde estão.
@@ -124,3 +124,34 @@ React 19, TypeScript, Vite, Three.js, React Three Fiber e Drei. Assets nativos e
 4. Depois, animações, movimentação, ficha, fog of war e sessões compartilhadas com permissões.
 
 Os testes automatizados cobrem integridade do projeto, portabilidade de referências, validação de dados e limites. A verificação por navegador nesta implementação cobriu o modo de compatibilidade; o navegador de testes não disponibilizou WebGL. A validação visual da renderização 3D e dos gizmos em hardware real permanece necessária.
+
+
+
+## Biblioteca ampliada: categorias e tipos
+
+| Categoria | Peças | Exemplos de tipos |
+| --- | ---: | --- |
+| Natureza | 16 | Árvores, plantas, rochas e troncos, água, cristais |
+| Construções | 16 | Edificações, paredes e portões, pisos e escadas, cercas, pontes e cais |
+| Mobiliário | 6 | Mesas e balcões, assentos, camas, estantes |
+| Acampamento | 6 | Abrigo, cozinha, suprimentos |
+| Iluminação | 4 | Lanternas, tochas e braseiros, velas |
+| Masmorra | 5 | Tesouros, grades, criptas, armadilhas |
+| Decoração | 8 | Sinalização, esculturas, recipientes, comércio, equipamentos |
+| Básicos | 3 | Primitivas |
+
+`Categoria`, `Tipo` e busca funcionam juntos. A busca ignora acentos e maiúsculas e considera o nome, a categoria, o tipo e palavras-chave; por exemplo, `prisao` encontra a jaula e `madeira mesa` encontra a mesa de taverna. Ao trocar a categoria, o tipo volta a `Todos os tipos`. `Limpar filtros` restaura a biblioteca completa. Os modelos enviados pelo usuário continuam separados em `Importados`.
+
+Os identificadores das 32 peças anteriores foram preservados. As camadas da cena continuam com os cinco agrupamentos existentes; mobiliário, acampamento, iluminação, masmorra e decoração pertencem à camada `Objetos`.
+
+Os novos modelos são geometrias procedurais reais em `src/scene/detailedModels.ts`, com materiais agrupados para reduzir chamadas de desenho. Instâncias da mesma peça compartilham geometrias e materiais. As miniaturas PNG, incorporadas ao código e às imagens SVG exportadas pelo modo compatível, são renderizadas offline a partir dessas mesmas geometrias, com projeção ortográfica e teste de profundidade. Não são imagens de modelos externos.
+
+Para regenerar as miniaturas após editar a geometria:
+
+```sh
+npm run assets:previews
+npm test
+npm run build
+```
+
+A bateria contém 47 testes, incluindo catálogo, busca combinada, categorias, compatibilidade dos mapas e limites geométricos dos 32 novos modelos. A geometria é verificada sem GPU; a conferência visual no navegador disponível usa o modo compatível porque ele não disponibiliza WebGL. O desempenho e o acabamento da renderização WebGL em hardware real ainda precisam dessa verificação.

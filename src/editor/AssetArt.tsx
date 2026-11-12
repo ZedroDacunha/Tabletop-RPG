@@ -1,5 +1,7 @@
+import previews from '../features/assets/modelPreviews.json';
+import {isDetailedKind} from '../features/assets/detailedKinds';
 import type {Kind} from '../features/projects/project';
-export function AssetArt({kind}:{kind:Kind|'model'}){return <svg viewBox="0 0 140 100" fill="none" aria-hidden="true"><ellipse cx="70" cy="80" rx="37" ry="9" fill="#000" opacity=".15"/>{(()=>{switch(kind){
+export function AssetArt({kind}:{kind:Kind|'model'}){if(isDetailedKind(kind))return <svg viewBox="0 0 140 100" aria-hidden="true"><image width="140" height="100" href={previews[kind]}/></svg>;return <svg viewBox="0 0 140 100" fill="none" aria-hidden="true"><ellipse cx="70" cy="80" rx="37" ry="9" fill="#000" opacity=".15"/>{(()=>{switch(kind){
 case 'pine':return <><path d="M66 55h8v26l-8-3z" fill="#846648"/><path d="M70 16 39 67l31 9 30-10z" fill="#597d60"/><path d="m70 16 0 60 30-10z" fill="#416249"/><path d="m70 5-25 44 25 8 24-8z" fill="#81a176"/><path d="m70 5 0 52 24-8z" fill="#658a63"/></>;
 case 'oak':return <><path d="m65 43 12 0-3 39-8-3z" fill="#8e7254"/><path d="m72 57 12-15 3 3-13 22z" fill="#8e7254"/><path d="m35 31 16-16 25 2 14 18-7 20-30 6-20-13z" fill="#75926e"/><path d="m67 12 24-4 20 14 2 27-25 11-23-15z" fill="#91aa7d"/><path d="m68 28 22 8-2 24-23-15z" fill="#69865f"/></>;
 case 'rock':return <><path d="m30 66 11-32 28-12 35 26 5 26-31 10z" fill="#a2afa5"/><path d="m41 34 28-12 3 35-42 9z" fill="#c0c8b8"/><path d="m72 57 32-9 5 26-31 10z" fill="#778c80"/><path d="m94 67 16-7 17 14-15 12-24-6z" fill="#899c90"/></>;
@@ -33,3 +35,4 @@ case 'sphere':return <><circle cx="70" cy="51" r="30" fill="#c8b38a"/><path d="M
 case 'cylinder':return <><path d="M45 31v39c0 22 50 22 50 0V31" fill="#8baba0"/><ellipse cx="70" cy="31" rx="25" ry="12" fill="#bdd0bb"/><path d="M80 43v41c9-1 15-7 15-14V31c0 5-6 10-15 12" fill="#678e83"/></>;
 default:return <><path d="m37 35 33-19 33 19v39L70 93 37 74z" fill="#94b58b"/><path d="m37 35 33 19 33-19-33-19z" fill="#c0d6a8"/><path d="m70 54 33-19v39L70 93z" fill="#638e70"/>{kind==='model'&&<path d="m61 63 9-5 10 5-10 6z" fill="#e0ecc9"/>}</>;
 }})()}</svg>}
+
