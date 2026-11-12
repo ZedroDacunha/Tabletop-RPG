@@ -2,6 +2,15 @@
 
 Protótipo de um editor de mapas de RPG em 3D para navegador, baseado no plano do projeto. Interface em português, visual low-poly e peças procedurais criadas para este projeto.
 
+## Documentação
+
+O histórico do projeto está registrado como notas de [Obsidian](https://obsidian.md) dentro do repositório — a pasta já vem com o `.obsidian/`, então basta abrir a raiz do repositório como cofre.
+
+- `Bugs e soluções/` — um arquivo por bug (`BUG-XXX - título curto.md`), com causa raiz, correção antes/depois e como validar. Comece pelo índice: `Bugs e soluções/_Índice.md`.
+- `Melhorias e Atualizações/` — um arquivo por entrega (`MEL-XXX - título curto.md`), com motivação, como era antes, decisões descartadas e impacto. Comece pelo índice: `Melhorias e Atualizações/_Índice.md`.
+
+Os modelos para novas notas ficam em `Bugs e soluções/Bugs e soluçoes.md` e `Melhorias e Atualizações/Melhorias e Atualizações.md`. As notas usam frontmatter com tags (sem `#`) e `[[wikilinks]]` entre si.
+
 ## Executar
 
 Requisitos: Node.js 22 LTS e npm. Navegador desktop com WebGL 2 e aceleração gráfica para o editor 3D.
