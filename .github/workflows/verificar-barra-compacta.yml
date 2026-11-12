@@ -1,0 +1,46 @@
+name: Verificar barra compacta
+
+on:
+  push:
+    branches: [arena/**]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Preparar o Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Compilar o site
+        run: npm run build
+
+      - name: Instalar o navegador de teste
+        run: npm i --no-save puppeteer-core
+
+      - name: Rodar a verificação no navegador
+        run: node scripts/verificar-barra-compacta.mjs
+
+      - name: Publicar capturas
+        if: always()
+        run: |
+          rm -rf /tmp/pub && mkdir -p /tmp/pub
+          cp -r capturas/. /tmp/pub/
+          cd /tmp/pub
+          git init -q
+          git checkout -q -b capturas-ci
+          git add -A
+          git -c user.name="capturas" -c user.email="capturas@users.noreply.github.com" commit -qm "capturas: barra compacta"
+          git push -q --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" capturas-ci
