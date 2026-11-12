@@ -10,7 +10,9 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dist = path.join(root, 'dist');
 const capturas = path.join(root, 'capturas');
 const PORT = 4173;
-const BASE = `http://127.0.0.1:${PORT}/`;
+// O build feito no GitHub Actions usa base "/<repositório>/"; o servidor serve nesse prefixo.
+const PREFIXO = process.env.BASE_PATH ?? '/Tabletop-RPG';
+const BASE = `http://127.0.0.1:${PORT}${PREFIXO}/`;
 
 const tipos = {
   '.html': 'text/html; charset=utf-8',
@@ -25,8 +27,10 @@ const tipos = {
 };
 
 const servidor = http.createServer((req, res) => {
-  const url = decodeURIComponent((req.url ?? '/').split('?')[0]);
-  const relativo = url === '/' ? 'index.html' : url.replace(/^\/+/, '');
+  let url = decodeURIComponent((req.url ?? '/').split('?')[0]);
+  if (url === PREFIXO) url = '/';
+  if (url.startsWith(`${PREFIXO}/`)) url = url.slice(PREFIXO.length);
+  const relativo = url === '/' || url === '' ? 'index.html' : url.replace(/^\/+/, '');
   let arquivo = path.join(dist, relativo);
   if (!arquivo.startsWith(dist) || !fs.existsSync(arquivo) || fs.statSync(arquivo).isDirectory()) {
     arquivo = path.join(dist, 'index.html');
