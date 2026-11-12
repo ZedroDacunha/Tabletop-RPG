@@ -97,3 +97,4 @@
 .snippet-name{width:100%;background:none;border:0;border-radius:0;padding:0;font-size:11px;font-weight:550;color:#e6ebdf}
 .snippet-name:hover{color:#ecf4e3}
 .map-card .snippet-name:focus{border-color:transparent!important;color:#fff}
+.view-travel{width:52px;flex-shrink:0;padding:5px 2px;border:1px solid #3d5033;border-radius:5px;background:#22301f;color:#a9c093;font-size:9px}
