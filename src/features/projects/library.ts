@@ -40,3 +40,20 @@ export function copyName(name:string, taken:Iterable<string>):string{
  }
  return cleaned.slice(0,NAME_MAX);
 }
+
+export type MapSort='recentes'|'nome'|'tamanho';
+export const MAP_SORTS:[MapSort,string][]=[['recentes','Mais recentes'],['nome','Nome (A–Z)'],['tamanho','Tamanho do mapa']];
+function plain(value:string):string{
+ return value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR');
+}
+export function filterProjects(list:ProjectSummary[],query:string):ProjectSummary[]{
+ const term=plain(query.trim());
+ if(!term)return list;
+ return list.filter(project=>plain(project.name).includes(term));
+}
+export function sortProjects(list:ProjectSummary[],mode:MapSort):ProjectSummary[]{
+ const byName=(a:ProjectSummary,b:ProjectSummary)=>a.name.localeCompare(b.name,'pt-BR',{sensitivity:'base'});
+ if(mode==='nome')return [...list].sort(byName);
+ if(mode==='tamanho')return [...list].sort((a,b)=>b.size-a.size||byName(a,b));
+ return [...list].sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
+}
