@@ -21,7 +21,7 @@ Um mapa de RPG precisa de atmosfera. Sem horizonte, luz direcional e névoa, as 
 - Fundo chapado (`settings.background`, `#202a28`) atrás de tudo, sem céu.
 - Chão liso, uma `boxGeometry` e um plano sem textura.
 - Uma luz ambiente e uma direcional, iguais em qualquer hora do dia.
-- Acervo menor: pela descrição da PR ("dobra o acervo"), eram 16 peças; o código hoje traz **32**.
+- Acervo menor: o protótipo nasceu com **15 peças** (PR #1) e a PR #51 se descreveu como "dobra o acervo"; o código hoje traz **32**.
 
 ## Como ficou agora
 - Presets de atmosfera `dawn`, `day`, `dusk` e `night` no mapa `AMBIENCE`, cada um com cores de céu, sol, névoa, luz e densidade de estrelas.
