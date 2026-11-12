@@ -21,8 +21,8 @@ function CameraRig({project,command,onCamera}:Pick<Props,'project'|'command'|'on
   const c=controls.current,anim=travel.current;if(!c||!anim)return;
   const progress=anim.duration>0?Math.min(1,(performance.now()-anim.start)/anim.duration):1;
   const eased=progress<.5?4*progress*progress*progress:1-Math.pow(-2*progress+2,3)/2;
-  const dbg=(window as unknown as {__viagem?:{frames:number;last?:number}}).__viagem;
-  if(dbg){dbg.frames+=1;dbg.last=progress}
+  const dbg=(window as unknown as {__viagem?:{frames:number;last?:number;rows:{dt:number;p:number}[]}}).__viagem;
+  if(dbg){dbg.frames+=1;dbg.last=progress;if(dbg.rows.length<24)dbg.rows.push({dt:Math.round(performance.now()-(dbg as unknown as {effectAt:number}).effectAt),p:Math.round(progress*100)/100})}
   camera.position.lerpVectors(anim.fromPosition,anim.toPosition,eased);
   c.target.lerpVectors(anim.fromTarget,anim.toTarget,eased);
   c.update();invalidate();
@@ -34,7 +34,7 @@ function CameraRig({project,command,onCamera}:Pick<Props,'project'|'command'|'on
  if(command.type==='view'&&command.position&&command.target){const duration=command.duration??0;
   if(duration<=0){camera.position.fromArray(command.position);c.target.fromArray(command.target);c.update();invalidate();remember();return}
   travel.current={fromPosition:camera.position.clone(),toPosition:new THREE.Vector3(...command.position),fromTarget:c.target.clone(),toTarget:new THREE.Vector3(...command.target),start:performance.now(),duration};
-  (window as unknown as {__viagem?:unknown}).__viagem={duration,from:camera.position.toArray(),to:command.position,frames:0};
+  (window as unknown as {__viagem?:Record<string,unknown>}).__viagem={duration,from:camera.position.toArray(),to:command.position,frames:0,effectAt:performance.now(),rows:[]};
   c.enabled=false;invalidate();return;
  }
  if(command.type==='image'){gl.render(scene,camera);gl.domElement.toBlob(blob=>{if(blob)downloadFile(blob,`${project.name}.png`)});return;}

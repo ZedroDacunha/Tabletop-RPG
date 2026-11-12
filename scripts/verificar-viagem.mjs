@@ -181,6 +181,13 @@ try {
   rows = await viewRows();
   check('o editor volta com o roteiro e os tempos', rows.length === 2 && rows[0].travel === '0.5' && rows[1].travel === '3', rows.map(r => `${r.name}=${r.travel}`).join(' | '));
 
+  const fps = await page.evaluate(() => new Promise(resolve => {
+    let frames = 0; const started = performance.now();
+    const tick = () => { frames += 1; if (performance.now() - started < 2000) requestAnimationFrame(tick); else resolve(Math.round(frames / 2)); };
+    requestAnimationFrame(tick);
+  }));
+  check('ritmo de quadros do navegador de teste', true, `${fps} quadros por segundo livres`);
+
   const realErrors = consoleErrors.filter(t => !/favicon|WebGL|THREE\.WebGLRenderer|SwiftShader/i.test(t));
   check('console limpo', realErrors.length === 0, realErrors.slice(0, 3).join(' | '));
 } catch (e) {
