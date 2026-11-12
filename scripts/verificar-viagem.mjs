@@ -124,11 +124,14 @@ try {
   await page.keyboard.press('ArrowRight');
   await sleep(700);
   const early = await fingerprint();
+  await page.screenshot({ path: 'capturas/meio.jpg', type: 'jpeg', quality: 80 });
   await sleep(700);
   const middle = await fingerprint();
   const lastView = await settle();
+  const debug = await page.evaluate(() => (window.__viagem ?? null));
   check('a câmera se move durante a viagem', early !== firstView && middle !== firstView && middle !== lastView,
     `0,7 s ${early} · 1,4 s ${middle} · início ${firstView} · fim ${lastView}`);
+  check('depuração da viagem', true, JSON.stringify(debug));
   check('a viagem termina em outro enquadramento', lastView !== firstView && lastView !== middle, `fim ${lastView}`);
   check('a pílula acompanha a troca de vista', (await text()).includes('2 / 2'), '2 / 2');
   await page.screenshot({ path: 'capturas/viagem-apresentacao.jpg', type: 'jpeg', quality: 88 });
