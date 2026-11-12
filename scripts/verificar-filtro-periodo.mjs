@@ -165,7 +165,7 @@ try {
   await esperar(250);
   await page.type('input[aria-label="Buscar mapas"]', 'acamp');
   await esperar(350);
-  const vazio = await page.$eval('.muted-note', (el) => el.textContent.trim());
+  const vazio = await page.$eval('.modal .muted-note', (el) => el.textContent.trim());
   registrar(
     vazio.startsWith('Nenhum mapa com esses filtros'),
     'mensagem de vazio fala de filtros',
