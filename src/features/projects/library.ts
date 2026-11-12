@@ -30,6 +30,12 @@ export function timeAgo(iso:string,now=Date.now()):string{
 }
 
 export const NAME_MAX=80;
+export const MAP_NAME_MAX=120;
+export function cleanMapName(name:string, fallback='Mapa'):string{
+ const clean=name.replace(/\s+/g,' ').trim().slice(0,MAP_NAME_MAX).trim();
+ return clean||fallback||'Mapa';
+}
+
 export function copyName(name:string, taken:Iterable<string>):string{
  const used=new Set(Array.from(taken,n=>n.trim().toLocaleLowerCase('pt-BR')));
  const cleaned=(name.trim()||'Mapa').replace(/\s*\(cópia(?:\s+\d+)?\)$/i,'').trim()||'Mapa';
