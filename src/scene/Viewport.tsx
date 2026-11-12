@@ -19,7 +19,7 @@ function CameraRig({project,command,onCamera}:Pick<Props,'project'|'command'|'on
  const travel=useRef<{fromPosition:THREE.Vector3;toPosition:THREE.Vector3;fromTarget:THREE.Vector3;toTarget:THREE.Vector3;start:number;duration:number}|null>(null);
  useFrame(()=>{
   const c=controls.current,anim=travel.current;if(!c||!anim)return;
-  const progress=anim.duration>0?Math.min(1,(performance.now()-anim.start)/anim.duration):1;
+  const progress=anim.duration>0?Math.min(1,(performance.now()-anim.start)/(anim.duration*1000)):1;
   const eased=progress<.5?4*progress*progress*progress:1-Math.pow(-2*progress+2,3)/2;
   const dbg=(window as unknown as {__viagem?:{frames:number;last?:number;rows:Record<string,number>[]}}).__viagem;
   if(dbg){dbg.frames+=1;dbg.last=progress;if(dbg.rows.length<24)dbg.rows.push({dt:Math.round(performance.now()-(dbg as unknown as {effectAt:number}).effectAt),p:Math.round(progress*100)/100,dur:anim.duration,elapsed:Math.round(performance.now()-anim.start)})}
