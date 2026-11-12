@@ -74,9 +74,11 @@ try{
 
  // 1. Mapa de exemplo com peças, renomeado para "Acampamento".
  await clickText('Explorar mapa de exemplo');
- await page.waitForSelector('.modal', { timeout: 10000 });
- await clickText('Abrir exemplo', '.modal button');
- await page.waitForFunction(() => !document.querySelector('.modal'), { timeout: 20000 });
+ await new Promise(r => setTimeout(r, 500));
+ if (await page.evaluate(() => Boolean(document.querySelector('.modal')))) {
+  await clickText('Abrir exemplo', '.modal button');
+  await page.waitForFunction(() => !document.querySelector('.modal'), { timeout: 20000 });
+ }
  await page.waitForFunction(() => /objetos/.test(document.querySelector('.statusbar')?.textContent ?? ''), { timeout: 20000 });
  await setName('Acampamento');
  await page.waitForFunction(() => document.querySelector('.save-status')?.textContent.includes('Salvo'), { timeout: 20000 });
