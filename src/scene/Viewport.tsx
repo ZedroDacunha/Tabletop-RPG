@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import {BuiltinModel,ImportedModel} from './Models';
 import {alignToNeighbours,nearestNeighbour,selectionCenter,type Project,type Entity,type Vec3} from '../features/projects/project';
 import {CompatibleMap} from './CompatibleMap';
+import {easeInOut,travelProgress} from '../features/scenes/views';
 import {downloadFile} from '../features/projects/storage';
 export type Tool='select'|'translate'|'rotate'|'scale';
 export type CameraCommand={id:number;type:'home'|'top'|'focus'|'image'|'view';position?:Vec3;target?:Vec3;duration?:number};
@@ -19,12 +20,9 @@ function CameraRig({project,command,onCamera}:Pick<Props,'project'|'command'|'on
  const travel=useRef<{fromPosition:THREE.Vector3;toPosition:THREE.Vector3;fromTarget:THREE.Vector3;toTarget:THREE.Vector3;start:number;duration:number}|null>(null);
  useFrame(()=>{
   const c=controls.current,anim=travel.current;if(!c||!anim)return;
-  const progress=anim.duration>0?Math.min(1,(performance.now()-anim.start)/(anim.duration*1000)):1;
-  const eased=progress<.5?4*progress*progress*progress:1-Math.pow(-2*progress+2,3)/2;
-  const dbg=(window as unknown as {__viagem?:{frames:number;last?:number;rows:Record<string,number>[]}}).__viagem;
-  if(dbg){dbg.frames+=1;dbg.last=progress;if(dbg.rows.length<24)dbg.rows.push({dt:Math.round(performance.now()-(dbg as unknown as {effectAt:number}).effectAt),p:Math.round(progress*100)/100,dur:anim.duration,elapsed:Math.round(performance.now()-anim.start)})}
-  camera.position.lerpVectors(anim.fromPosition,anim.toPosition,eased);
-  c.target.lerpVectors(anim.fromTarget,anim.toTarget,eased);
+  const progress=travelProgress(anim.start,performance.now(),anim.duration);
+  camera.position.lerpVectors(anim.fromPosition,anim.toPosition,easeInOut(progress));
+  c.target.lerpVectors(anim.fromTarget,anim.toTarget,easeInOut(progress));
   c.update();invalidate();
   if(progress>=1){travel.current=null;c.enabled=true;remember()}
  });
@@ -34,7 +32,6 @@ function CameraRig({project,command,onCamera}:Pick<Props,'project'|'command'|'on
  if(command.type==='view'&&command.position&&command.target){const duration=command.duration??0;
   if(duration<=0){camera.position.fromArray(command.position);c.target.fromArray(command.target);c.update();invalidate();remember();return}
   travel.current={fromPosition:camera.position.clone(),toPosition:new THREE.Vector3(...command.position),fromTarget:c.target.clone(),toTarget:new THREE.Vector3(...command.target),start:performance.now(),duration};
-  (window as unknown as {__viagem?:Record<string,unknown>}).__viagem={duration,from:camera.position.toArray(),to:command.position,frames:0,effectAt:performance.now(),rows:[]};
   c.enabled=false;invalidate();return;
  }
  if(command.type==='image'){gl.render(scene,camera);gl.domElement.toBlob(blob=>{if(blob)downloadFile(blob,`${project.name}.png`)});return;}

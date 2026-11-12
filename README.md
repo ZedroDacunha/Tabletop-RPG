@@ -41,6 +41,7 @@ O build publicado leva de 1 a 2 minutos para aparecer no ar. O GitHub Pages prec
 - **Trechos** (`.trecho`): com peças selecionadas, `Exportar trecho` baixa um arquivo só com elas — mais os grupos a que pertencem e os modelos 3D que usam. No outro mapa, `Importar trecho` na biblioteca cola o conjunto assentado num ponto livre, já selecionado, com grupos e nomes preservados e tudo em um passo de desfazer.
 - **Meus trechos** (rodapé da biblioteca): a seleção vira um bloco salvo no navegador — `Salvar trecho` no painel de seleção múltipla — e volta com `Colar` em qualquer mapa, sem passar por arquivo. Cada trecho guarda peças, grupos e modelos 3D, mostra a miniatura, quantas peças tem e de qual mapa veio, e pode ser renomeado (Enter confirma) ou excluído. O navegador guarda até 20 trechos.
 - **Roteiro de apresentação**: o painel de propriedades tem uma seção Roteiro onde você salva a vista atual da câmera, renomeia ("Vista do portão") e navega com um clique. No modo apresentação o roteiro aparece como uma pílula no rodapé: `←`/`→` ou as setas da pílula passam de uma vista para outra, com o nome da cena e a posição no roteiro. As vistas viajam no `.tabletop` e no salvamento automático.
+- **Tempo de viagem por vista**: cada vista do roteiro tem seu próprio tempo de transição (0 s, 0,5 s, 1 s, 1,5 s, 2 s ou 3 s; padrão 1,2 s). A câmera viaja com aceleração no começo e freio no fim; `0 s` corta seco, como antes. O tempo fica salvo com o mapa e vale tanto para o `Ir` no editor quanto para as setas do modo apresentação.
 - **Modo apresentação** (`P`): tela cheia só com a cena — sem cabeçalho, biblioteca, painel de propriedades, barras de ferramentas ou rodapé. Botão direito orbita, scroll aproxima; `Esc` ou `P` volta ao editor. O botão de apresentação fica no topo, ao lado de exportar.
 - **Seleção múltipla**: Shift + clique (ou Ctrl/Cmd + clique) soma e retira peças no mapa e na lista da Cena; Ctrl/Cmd + A seleciona todas. As peças selecionadas ganham anel, e o gizmo aparece no centro do grupo para arrastar, girar ou escalar tudo junto. Setas, `Ctrl+D` e `Delete` valem para a seleção inteira, e o painel mostra as ações do conjunto (focar, duplicar, travar, remover).
 - **Meus mapas**: o botão no topo abre a biblioteca de mapas salvos neste navegador, com miniatura gerada a partir das peças, contagem e quando foi salvo. Dá para abrir outro mapa, excluir os que não usa mais e criar um novo sem perder o atual; o último aberto volta ao recarregar a página.
@@ -107,7 +108,7 @@ React 19, TypeScript, Vite, Three.js, React Three Fiber e Drei. Assets nativos e
 ## Próximas etapas
 
 1. Validar câmera, gizmos e desempenho em notebooks com GPU integrada e dedicada.
-2. Adicionar busca e ordenação em Meus mapas e transições suaves entre as vistas do roteiro.
+2. Adicionar busca e ordenação em Meus mapas.
 3. Introduzir entidade de personagem com nome, miniatura e atributos, separada dos objetos de cenário.
 4. Depois, animações, movimentação, ficha, fog of war e sessões compartilhadas com permissões.
 

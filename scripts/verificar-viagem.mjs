@@ -138,6 +138,8 @@ try {
   await setTravel(1, '3');
   await sleep(400);
   rows = await viewRows();
+  const labels = await page.evaluate(() => [...document.querySelectorAll('.view-row .view-travel')].map(select => select.options[select.selectedIndex]?.textContent ?? ''));
+  check('os tempos aparecem em segundos, com vírgula', labels.join('|') === '0,5 s|3 s', labels.join(' · '));
   check('o mapa de teste tem duas vistas com tempos 0,5 s e 3 s', rows[0].travel === '0.5' && rows[1].travel === '3', rows.map(r => `${r.name}=${r.travel}`).join(' | '));
 
   // 4. Modo apresentação: viagem longa mostra o caminho entre as vistas.
@@ -157,14 +159,13 @@ try {
   }
   await page.screenshot({ path: 'capturas/viagem-meio.jpg', type: 'jpeg', quality: 85 });
   const lastView = await settle();
-  const debug = await page.evaluate(() => (window.__viagem ?? null));
+
   const trail = [firstView, ...samples, lastView];
   const distinct = new Set(trail).size;
   check('a câmera passa por enquadramentos intermediários', distinct >= 4, `${distinct} quadros distintos · ${trail.join(' · ')}`);
   check('o meio da viagem não está no início nem no fim', samples.some(s => s !== firstView && s !== lastView), `meio ${samples.join(' · ')}`);
   check('a viagem termina em outro enquadramento', lastView !== firstView, `fim ${lastView} · início ${firstView}`);
   check('a pílula acompanha a troca de vista', (await text()).includes('2 / 2'), '2 / 2');
-  check('a viagem é medida contra o relógio', Boolean(debug) && debug.duration === 3, JSON.stringify(debug));
   await page.screenshot({ path: 'capturas/viagem-apresentacao.jpg', type: 'jpeg', quality: 88 });
 
   // 5. Vista com 0,5 s: viagem curta e volta ao mesmo lugar.

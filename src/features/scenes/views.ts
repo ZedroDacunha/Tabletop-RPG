@@ -30,3 +30,13 @@ export function defaultViewName(views:Viewpoint[]|undefined):string{
  const count=(views??[]).length+1;
  return `Vista ${count}`;
 }
+
+export function easeInOut(progress:number):number{
+ const t=Math.min(1,Math.max(0,Number.isFinite(progress)?progress:1));
+ return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+}
+export function travelProgress(startedAt:number,now:number,seconds:number):number{
+ if(!(seconds>0))return 1;
+ const elapsed=Number.isFinite(now-startedAt)?now-startedAt:seconds*1000;
+ return Math.min(1,Math.max(0,elapsed/(seconds*1000)));
+}
