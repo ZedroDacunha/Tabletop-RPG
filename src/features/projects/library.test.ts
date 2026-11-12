@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {emptyProject,makeEntity} from './project';
-import {MAX_DOTS,newestFirst,summarise,timeAgo} from './library';
+import {MAX_DOTS,NAME_MAX,copyName,newestFirst,summarise,timeAgo} from './library';
 
 test('the summary keeps the map identity and a small preview of the pieces',()=>{
  const p=emptyProject();p.name='Bosque';p.objects=[makeEntity('pine','A',[3,0,-4]),{...makeEntity('rock','B'),visible:false}];
@@ -33,4 +33,18 @@ test('the saved time is described in words',()=>{
  assert.equal(timeAgo('2026-11-06T12:00:00.000Z',now),'há 5 dias');
  assert.equal(timeAgo('2026-06-02T12:00:00.000Z',now),'02/06/2026');
  assert.equal(timeAgo('nao-e-data',now),'agora mesmo');
+});
+
+test('a copy gets a free name without touching the original',()=>{
+ assert.equal(copyName('Bosque',[]),'Bosque (cópia)');
+ assert.equal(copyName('Bosque',['Bosque (cópia)']),'Bosque (cópia 2)');
+ assert.equal(copyName('Bosque',['Bosque (cópia)','Bosque (cópia 2)']),'Bosque (cópia 3)');
+ assert.equal(copyName('Bosque (cópia)',['Bosque (cópia)']),'Bosque (cópia 2)');
+ assert.equal(copyName('Bosque',['bosque (CÓPIA)']),'Bosque (cópia 2)');
+ assert.equal(copyName('Bosque',['Outro mapa']),'Bosque (cópia)');
+ assert.equal(copyName('   ',[]),'Mapa (cópia)');
+ const long=copyName('M'.repeat(120),[]);
+ assert.equal(long.length,NAME_MAX);
+ assert.ok(long.endsWith(' (cópia)'));
+ assert.ok(copyName('N'.repeat(NAME_MAX),['N'.repeat(NAME_MAX)+' (cópia)']).length<=NAME_MAX);
 });

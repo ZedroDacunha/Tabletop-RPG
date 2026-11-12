@@ -1,5 +1,5 @@
-import {validateProject,type Project} from './project';
-import {newestFirst,summarise,type ProjectSummary} from './library';
+import {uid,validateProject,type Project} from './project';
+import {copyName,newestFirst,summarise,type ProjectSummary} from './library';
 
 const DB='tabletop-rpg',VERSION=2,LEGACY_KEY='current';
 const database=()=>new Promise<IDBDatabase>((resolve,reject)=>{
@@ -14,10 +14,13 @@ function readKey<T>(db:IDBDatabase,store:string,key:IDBValidKey):Promise<T|undef
 function write(db:IDBDatabase,stores:string[],run:(tx:IDBTransaction)=>void):Promise<void>{
  return new Promise((resolve,reject)=>{const tx=db.transaction(stores,'readwrite');try{run(tx)}catch(e){reject(e);return}tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});
 }
+function readIndex(db:IDBDatabase):Promise<ProjectSummary[]>{
+ return new Promise((resolve,reject)=>{const request=db.transaction('index','readonly').objectStore('index').getAll();request.onsuccess=()=>resolve((request.result??[]) as ProjectSummary[]);request.onerror=()=>reject(request.error);});
+}
 export async function listProjects():Promise<ProjectSummary[]>{
  const db=await database();
  try{
-  const summaries=await new Promise<ProjectSummary[]>((resolve,reject)=>{const request=db.transaction('index','readonly').objectStore('index').getAll();request.onsuccess=()=>resolve((request.result??[]) as ProjectSummary[]);request.onerror=()=>reject(request.error);});
+  const summaries=await readIndex(db);
   return newestFirst(summaries.filter(s=>s&&typeof s.id==='string'));
  }finally{db.close()}
 }
@@ -35,10 +38,24 @@ export async function loadProject(id?:string):Promise<Project|null>{
   return project;
  }finally{db.close()}
 }
+function store(db:IDBDatabase, project:Project, makeCurrent:boolean):Promise<void>{
+ return write(db,makeCurrent?['projects','index','meta']:['projects','index'],tx=>{tx.objectStore('projects').put(project,project.id);tx.objectStore('index').put(summarise(project),project.id);if(makeCurrent)tx.objectStore('meta').put(project.id,'last');});
+}
 export async function saveProject(project:Project):Promise<void>{
  const db=await database();
  try{
-  await write(db,['projects','index','meta'],tx=>{tx.objectStore('projects').put(project,project.id);tx.objectStore('index').put(summarise(project),project.id);tx.objectStore('meta').put(project.id,'last');});
+  await store(db,project,true);
+ }finally{db.close()}
+}
+export async function duplicateProject(id:string):Promise<Project|null>{
+ const db=await database();
+ try{
+  const raw=await readKey<unknown>(db,'projects',id);
+  if(raw===undefined)return null;
+  const original=validateProject(raw);
+  const copy:Project={...original,id:uid(),name:copyName(original.name,(await readIndex(db)).map(s=>s.name)),updatedAt:new Date().toISOString()};
+  await store(db,copy,false);
+  return copy;
  }finally{db.close()}
 }
 export async function deleteProject(id:string):Promise<void>{
