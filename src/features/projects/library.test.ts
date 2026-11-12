@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {emptyProject,makeEntity} from './project';
-import {MAX_DOTS,MAP_NAME_MAX,MAP_SORTS,NAME_MAX,cleanMapName,copyName,filterProjects,newestFirst,sortProjects,summarise,timeAgo} from './library';
+import {MAX_DOTS,MAP_NAME_MAX,MAP_PERIODS,MAP_SORTS,NAME_MAX,cleanMapName,copyName,filterProjects,newestFirst,sortProjects,summarise,timeAgo,withinPeriod} from './library';
 
 test('the summary keeps the map identity and a small preview of the pieces',()=>{
  const p=emptyProject();p.name='Bosque';p.objects=[makeEntity('pine','A',[3,0,-4]),{...makeEntity('rock','B'),visible:false}];
@@ -88,4 +88,22 @@ test('the map name is cleaned before it is saved',()=>{
  assert.equal(cleanMapName('x'.repeat(200)).length,MAP_NAME_MAX);
  assert.equal(cleanMapName('  '+'y'.repeat(200)+'   ').length,MAP_NAME_MAX,'o corte não deixa espaço no fim');
  assert.equal(MAP_NAME_MAX,120);
+});
+
+test('the library filters maps by period, with a boundary that includes the limit',()=>{
+ const agora=Date.parse('2026-11-11T12:00:00.000Z');
+ const dia=24*60*60*1000;
+ const recente=summary('Recente',30,new Date(agora-60*60*1000).toISOString());
+ const limite=summary('Limite',30,new Date(agora-7*dia).toISOString());
+ const antigo=summary('Antigo',30,new Date(agora-7*dia-1000).toISOString());
+ const mes=summary('Do mês',30,new Date(agora-29*dia).toISOString());
+ const velho=summary('Velho',30,new Date(agora-45*dia).toISOString());
+ const lista=[recente,limite,antigo,mes,velho];
+
+ assert.deepEqual(withinPeriod(lista,'todos',agora).map(m=>m.name),['Recente','Limite','Antigo','Do mês','Velho']);
+ assert.equal(withinPeriod(lista,'todos',agora),lista,'sem filtro a lista original volta inteira');
+ assert.deepEqual(withinPeriod(lista,'7',agora).map(m=>m.name),['Recente','Limite'],'o limite de 7 dias entra no filtro');
+ assert.deepEqual(withinPeriod(lista,'30',agora).map(m=>m.name),['Recente','Limite','Antigo','Do mês'],'45 dias atrás fica fora de 30');
+ assert.deepEqual(withinPeriod([{...recente,updatedAt:'não é data'}],'7',agora).map(m=>m.name),[],'data inválida fica fora');
+ assert.deepEqual(MAP_PERIODS.map(([id])=>id),['todos','7','30']);
 });

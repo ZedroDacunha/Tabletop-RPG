@@ -52,6 +52,13 @@ export const MAP_SORTS:[MapSort,string][]=[['recentes','Mais recentes'],['nome',
 function plain(value:string):string{
  return value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR');
 }
+export type MapPeriod='todos'|'7'|'30';
+export const MAP_PERIODS:[MapPeriod,string][]=[['todos','Qualquer data'],['7','Últimos 7 dias'],['30','Últimos 30 dias']];
+export function withinPeriod(list:ProjectSummary[],period:MapPeriod,now=Date.now()):ProjectSummary[]{
+ if(period==='todos')return list;
+ const limit=now-Number(period)*24*60*60*1000;
+ return list.filter(m=>{const time=Date.parse(m.updatedAt);return Number.isFinite(time)&&time>=limit});
+}
 export function filterProjects(list:ProjectSummary[],query:string):ProjectSummary[]{
  const term=plain(query.trim());
  if(!term)return list;
