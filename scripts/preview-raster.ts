@@ -35,6 +35,21 @@ export function codificarPng(rgba: Buffer, largura: number, altura: number): Buf
   return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', header), chunk('IDAT', deflateSync(rows)), chunk('IEND', Buffer.alloc(0))]);
 }
 
+/** Amostra bilinear com repetição para as DataTextures locais dos modelos. */
+function amostrarTextura(map: T.DataTexture, u: number, v: number): [number, number, number] {
+  const {data, width, height} = map.image;
+  const x = (((u % 1) + 1) % 1) * width - .5;
+  const y = (((v % 1) + 1) % 1) * height - .5;
+  const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
+  const rgb: [number, number, number] = [0, 0, 0];
+  for (let dy = 0; dy <= 1; dy++) for (let dx = 0; dx <= 1; dx++) {
+    const index = (((iy + dy + height) % height) * width + (ix + dx + width) % width) * 4;
+    const peso = (dx ? fx : 1 - fx) * (dy ? fy : 1 - fy);
+    for (let c = 0; c < 3; c++) rgb[c] += Number(data[index + c]) / 255 * peso;
+  }
+  return rgb;
+}
+
 export type Vista = {azimute: number; elevacao: number; distancia?: number};
 
 /** Direção de câmera a partir de ângulos em graus, na mesma distância da vista padrão. */
@@ -54,7 +69,7 @@ export function renderModelPreview(modelo: T.Object3D, opcoes: {direcao?: [numbe
   camera.lookAt(centro);
   camera.updateMatrixWorld(true);
 
-  const faces: {p: T.Vector3[]; depth: number; color: string}[] = [];
+  const faces: {p: T.Vector3[]; depth: number; color: string; corLinear?: T.Color; map?: T.DataTexture; uv?: T.Vector2[]}[] = [];
   const luz = new T.Vector3(-.4, 1, .7).normalize();
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
   modelo.traverse((obj) => {
@@ -62,6 +77,7 @@ export function renderModelPreview(modelo: T.Object3D, opcoes: {direcao?: [numbe
     const material = obj.material as T.MeshStandardMaterial;
     const pos = obj.geometry.getAttribute('position');
     const idx = obj.geometry.index;
+    const uv = obj.geometry.getAttribute('uv');
     const count = idx?.count ?? pos.count;
     for (let i = 0; i < count; i += 3) {
       const p = [0, 1, 2].map((j) => new T.Vector3().fromBufferAttribute(pos, idx ? idx.getX(i + j) : i + j).applyMatrix4(obj.matrixWorld));
@@ -75,7 +91,9 @@ export function renderModelPreview(modelo: T.Object3D, opcoes: {direcao?: [numbe
         minX = Math.min(minX, v.x); maxX = Math.max(maxX, v.x);
         minY = Math.min(minY, v.y); maxY = Math.max(maxY, v.y);
       });
-      faces.push({p: projetado, depth: projetado.reduce((a, v) => a + v.z, 0) / 3, color: '#' + cor.getHexString()});
+      const map = material.map instanceof T.DataTexture && uv ? material.map : undefined;
+      faces.push({p: projetado, depth: projetado.reduce((a, v) => a + v.z, 0) / 3, color: '#' + cor.getHexString(),
+        ...(map ? {map, corLinear: cor, uv: [0, 1, 2].map((j) => new T.Vector2().fromBufferAttribute(uv, idx ? idx.getX(i + j) : i + j))} : {})});
     }
   });
 
@@ -110,9 +128,18 @@ export function renderModelPreview(modelo: T.Object3D, opcoes: {direcao?: [numbe
       const z = u * a.z + t * b.z + q * c.z, index = y * largura + x;
       if (z < depth[index]) continue;
       depth[index] = z;
-      rgba[index * 4] = rgb[0];
-      rgba[index * 4 + 1] = rgb[1];
-      rgba[index * 4 + 2] = rgb[2];
+      if (face.map && face.uv && face.corLinear) {
+        const tex = amostrarTextura(face.map, u * face.uv[0].x + t * face.uv[1].x + q * face.uv[2].x, u * face.uv[0].y + t * face.uv[1].y + q * face.uv[2].y);
+        const corTextura = new T.Color().setRGB(tex[0], tex[1], tex[2], face.map.colorSpace);
+        const cor = face.corLinear.clone().multiply(corTextura).getHexString();
+        rgba[index * 4] = parseInt(cor.slice(0, 2), 16);
+        rgba[index * 4 + 1] = parseInt(cor.slice(2, 4), 16);
+        rgba[index * 4 + 2] = parseInt(cor.slice(4, 6), 16);
+      } else {
+        rgba[index * 4] = rgb[0];
+        rgba[index * 4 + 1] = rgb[1];
+        rgba[index * 4 + 2] = rgb[2];
+      }
       rgba[index * 4 + 3] = 255;
     }
   }

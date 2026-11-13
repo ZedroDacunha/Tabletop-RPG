@@ -1,10 +1,9 @@
 import type {ConstrutorTenda} from '../helpers';
-import {corda, interiorEscuro, lonaChao, lonaRolo} from '../types';
+import {corda, lonaChao, lonaRolo} from '../types';
 
 /** Piso e acessórios guardados dentro da tenda. */
 export function construirInterior({superficie, cilindro, anel, caixa}: ConstrutorTenda) {
   // ---------- Interior ----------
-  superficie('interior', {cor: interiorEscuro}, 4, 4, (u, v) => [(u - .5) * 1.1, v * 1.35, .15], [0, 0, 1]);
   superficie('interior', {cor: lonaChao}, 5, 4, (u, v) => [(u - .5) * 1.9, .012, (v - .5) * 2.6], [0, 1, 0]);
   // saco de dormir enrolado e mochila, visíveis pela portinhola
   cilindro('interior', {cor: lonaRolo}, [-.42, .13, .9], .13, .13, .78, [0, 0, Math.PI / 2], 10);

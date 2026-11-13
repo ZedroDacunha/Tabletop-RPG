@@ -1,5 +1,6 @@
 /** Offline orthographic thumbnails from the exact 3D meshes. No GPU or external assets. */
 import {writeFileSync} from 'node:fs';
+import * as T from 'three';
 import {TREE_KINDS,isTreeKind} from '../src/features/assets/treeKinds';
 import {buildTreeModel} from '../src/scene/treeModels';
 import {renderTreePreview} from './render-tree-preview';
@@ -15,7 +16,7 @@ for (const kind of [...new Set<string>([...DETAILED_KINDS, ...TREE_KINDS])]) {
   }
   const modelo = buildDetailedModel(kind);
   previews[kind] = 'data:image/png;base64,' + renderModelPreview(modelo).toString('base64');
-  modelo.traverse((obj) => { if (obj instanceof Object && 'geometry' in obj) { (obj as {geometry: {dispose(): void}}).geometry.dispose(); (obj as unknown as {material: {dispose(): void}}).material.dispose(); } });
+  modelo.traverse((obj) => { if (obj instanceof T.Mesh) { obj.geometry.dispose(); const material = obj.material as T.MeshStandardMaterial; material.map?.dispose(); material.bumpMap?.dispose(); material.dispose(); } });
 }
 writeFileSync(new URL('../src/features/assets/modelPreviews.json', import.meta.url), JSON.stringify(previews));
 console.log(`Generated ${Object.keys(previews).length} geometry previews`);
