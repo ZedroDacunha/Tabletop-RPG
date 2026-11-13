@@ -71,5 +71,5 @@ PR [#97](https://github.com/ZedroDacunha/Tabletop-RPG/pull/97).
 
 ## Notas relacionadas
 - [[MEL-016 - Painel da biblioteca separado por função]]
-- [[MEL-031 - Tela de edição organizada com barra docada]]
+- [[MEL-031 - Tela de edicao organizada com barra docada]]
 - [[MEL-028 - Filtro por período em Meus mapas]]
