@@ -5,6 +5,7 @@ import * as T from 'three';
 import {buildTentModel} from './tentModel';
 import {criarConstrutor} from './tents/helpers';
 import {amostrarAgua, construirLona} from './tents/parts/canvas';
+import {construirEntrada} from './tents/parts/entrance';
 import {PASSO_CORDA} from './tents/ropeTexture';
 import previews from '../features/assets/modelPreviews.json';
 import {direcaoDeAngulos, renderModelPreview} from '../../scripts/preview-raster';
@@ -72,6 +73,46 @@ test('entrance has a clear passage and canvas above and beside it', () => {
   }
   for (const [x, y] of [[0, 1.52], [0, 1.8], [-.4, 1.52], [.4, 1.52], [-.8, .4], [.8, .4]]) {
     assert.equal(naFrente(x, y)[0]?.object.name, 'lona', `frente aberta fora da porta em ${x}, ${y}`);
+  }
+  descartar(model);
+});
+
+test('entrance flaps and their ties stay close to the front canvas on both sides', () => {
+  const builder = criarConstrutor();
+  construirEntrada(builder);
+  const model = builder.montar(), meshes = malhas(model), ray = new T.Raycaster();
+  const flap = meshes.find((m) => m.name === 'lona' && m.material.color.getHexString() === 'cdba8c')!;
+  const wall = meshes.find((m) => m.name === 'lona' && m.material.color.getHexString() === 'c1ad80')!;
+  const ties = meshes.find((m) => m.name === 'cordas')!;
+  assert.ok(flap && wall && ties);
+  const pos = flap.geometry.getAttribute('position');
+  let tested = 0;
+  for (let i = 0; i < pos.count; i += 3) {
+    const p = new T.Vector3();
+    for (let j = 0; j < 3; j++) p.add(new T.Vector3().fromBufferAttribute(pos, i + j));
+    p.multiplyScalar(1 / 3);
+    // O oitão central tem z=HALF_D; só as abas têm pequena folga positiva.
+    if (p.z < HALF_D + .0035) continue;
+    ray.set(p.clone().add(new T.Vector3(0, 0, .03)), new T.Vector3(0, 0, -1));
+    const suporte = ray.intersectObject(wall)[0];
+    assert.ok(suporte, `aba sem parede atrás: ${p.toArray()}`);
+    const afastamento = suporte.distance - .03;
+    assert.ok(afastamento >= .003 && afastamento <= .013, `aba descolada da parede: ${afastamento}`);
+    tested++;
+  }
+  assert.ok(tested > 100, 'abas não encontradas');
+  const tiePositions = ties.geometry.getAttribute('position');
+  for (let i = 0; i < tiePositions.count; i++) {
+    assert.ok(tiePositions.getZ(i) >= HALF_D - .002 && tiePositions.getZ(i) <= HALF_D + .025, 'amarração solta');
+  }
+  for (const lado of [-1, 1]) for (const u of [.125, .375, .625, .875]) {
+    const x = lado * (DOOR_W + .02 + .10 * u);
+    const topo = RIDGE + Math.abs(x) / HALF_W * (EAVE - RIDGE);
+    const y = .04 + .5 * (Math.min(1.5, topo - .025) - .04);
+    ray.set(new T.Vector3(x, y, HALF_D + .05), new T.Vector3(0, 0, -1));
+    const corda = ray.intersectObject(ties)[0], tecido = ray.intersectObject(flap)[0];
+    assert.ok(corda && tecido && corda.distance < tecido.distance, `amarração fora da aba: ${lado}, ${u}`);
+    assert.ok(tecido.distance - corda.distance < .015, 'amarração afastada da aba');
   }
   descartar(model);
 });
@@ -170,7 +211,7 @@ test('entrance borders stay below the roof profile', () => {
   let checked = 0;
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
-    if (Math.abs(z - (HALF_D + .025)) > 1e-5) continue;
+    if (Math.abs(z - (HALF_D + .003)) > 1e-5) continue;
     const roof = RIDGE + Math.abs(x) / HALF_W * (EAVE - RIDGE);
     assert.ok(y <= roof + 1e-5, `borda da porta passa pelo teto: ${x}, ${y}`);
     checked++;
