@@ -291,7 +291,7 @@ test('roof canvas weave is seamless and deterministic', () => {
     const builder = criarConstrutor();
     let faixas = 0;
     construirLona({...builder, superficie: (...args) => {
-      if (args[1].textura === 'trama' && faixas++ < 8) builder.superficie(...args);
+      if (args[1].textura === 'trama' && args[1].cor !== '#d8c79b' && faixas++ < 8) builder.superficie(...args);
     }});
     assert.equal(faixas, 12, 'o telhado e as quatro superfícies das paredes devem ter trama');
     return builder.montar();
@@ -325,11 +325,44 @@ test('roof canvas weave is seamless and deterministic', () => {
   descartar(a); descartar(b);
 });
 
+test('roof patch has a scaled weave aligned to the underlying canvas', () => {
+  const criar = () => { const b = criarConstrutor(); construirLona(b); return b.montar(); };
+  const model = criar(), outro = criar();
+  const patch = malhas(model).find((m) => m.material.color.getHexString() === 'd8c79b')!;
+  const outroPatch = malhas(outro).find((m) => m.material.color.getHexString() === 'd8c79b')!;
+  const seams = malhas(model).find((m) => m.material.color.getHexString() === '9c895f')!;
+  assert.ok(patch.material.map instanceof T.DataTexture && patch.material.bumpMap instanceof T.DataTexture);
+  assert.equal(patch.material.side, T.DoubleSide);
+  assert.ok(patch.material.roughness > .8 && patch.material.bumpScale > 0);
+  assert.deepEqual(patch.material.map.image.data, (outroPatch.material.map as T.DataTexture).image.data);
+  assert.ok(!seams.material.map && !seams.material.bumpMap, 'costuras permanecem para outra etapa');
+  const pos = patch.geometry.getAttribute('position'), uv = patch.geometry.getAttribute('uv');
+  assert.equal(pos.count, 12, 'geometria do remendo deve continuar com quatro triângulos');
+  assert.equal(uv.count, pos.count);
+  for (let i = 0; i < pos.count; i++) {
+    const along = uv.getX(i) * TAMANHO_TRAMA / (2 * HALF_D);
+    const across = uv.getY(i) * TAMANHO_TRAMA / Math.hypot(HALF_W, RIDGE - EAVE);
+    assert.ok(along >= 19 / 24 - 1e-5 && along <= 21 / 24 + 1e-5);
+    assert.ok(across >= .5 - 1e-5 && across <= 2 / 3 + 1e-5);
+    const [x, y, z] = amostrarAgua(-1, along, across);
+    const expected = new T.Vector3(x - .006 * .786, y + .006 * .618, z);
+    assert.ok(expected.distanceTo(new T.Vector3().fromBufferAttribute(pos, i)) < 1e-5, 'UV ou geometria do remendo deslocado');
+  }
+  // Isola o remendo para confirmar que o mapa de cor chega à prévia.
+  const detalhe = new T.Group(); detalhe.add(patch.clone());
+  const comTextura = renderModelPreview(detalhe, {direcao: [-7, 5, 8], largura: 500, altura: 500});
+  const mapa = patch.material.map; patch.material.map = null;
+  const semTextura = renderModelPreview(detalhe, {direcao: [-7, 5, 8], largura: 500, altura: 500});
+  patch.material.map = mapa;
+  assert.ok(contarDiferencas(comTextura, semTextura) > 500, 'trama não aparece na prévia');
+  descartar(model); descartar(outro);
+});
+
 test('wall weave follows physical coordinates across each facade and leaves details untouched', () => {
   const builder = criarConstrutor();
   let faixas = 0, paredes = 0, frente = 0;
   construirLona({...builder, superficie: (...args) => {
-    if (args[1].textura === 'trama' && faixas++ >= 8) { paredes++; builder.superficie(...args); }
+    if (args[1].textura === 'trama' && args[1].cor !== '#d8c79b' && faixas++ >= 8) { paredes++; builder.superficie(...args); }
   }});
   construirEntrada({...builder, superficie: (...args) => {
     if (args[1].textura === 'trama' && args[4](.5, .5)[2] === HALF_D) { frente++; builder.superficie(...args); }

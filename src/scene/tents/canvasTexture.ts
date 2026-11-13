@@ -1,8 +1,14 @@
 import * as T from 'three';
-import {HALF_D, HALF_W} from './types';
+import {HALF_D, HALF_W, RIDGE, EAVE} from './types';
 
 /** Um mosaico cobre 12 cm de lona; os fios se repetem dentro dele. */
 export const TAMANHO_TRAMA = .12;
+
+/** UVs em metros, partilhados pela água e pelos detalhes sobre ela. */
+export function uvTelhado(aoLongo: number, inclinacao: number): [number, number] {
+  return [aoLongo * 2 * HALF_D / TAMANHO_TRAMA,
+    inclinacao * Math.hypot(HALF_W, RIDGE - EAVE) / TAMANHO_TRAMA];
+}
 
 /** UVs em metros: mantêm a mesma escala de tecido nas paredes de cada plano. */
 export function uvParedeLateral(z: number, y: number): [number, number] {
