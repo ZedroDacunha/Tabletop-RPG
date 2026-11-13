@@ -208,7 +208,7 @@ test('canvas edges meet at the eaves and end walls without projecting past the c
 
 test('entrance borders stay below the roof profile', () => {
   const model = buildTentModel();
-  const border = malhas(model).find((m) => m.name === 'lona' && m.material.color.getHexString() === '9c895f' && !m.material.map);
+  const border = malhas(model).find((m) => m.name === 'lona' && m.material.color.getHexString() === '9c895f' && m.material.map);
   assert.ok(border);
   const pos = border.geometry.getAttribute('position');
   let checked = 0;
@@ -445,15 +445,62 @@ test('wall weave follows physical coordinates across each facade and leaves deta
   assert.ok(laterais && fundos && fachada, 'faltam paredes texturizadas');
   descartar(model);
 
-  const entrada = criarConstrutor();
-  construirEntrada(entrada);
-  const modeloEntrada = entrada.montar();
-  const seams = malhas(modeloEntrada).find((m) => m.name === 'lona' && m.material.color.getHexString() === '9c895f');
-  assert.ok(seams && !seams.material.map && !seams.material.bumpMap, 'costuras devem permanecer sem alteração');
-  descartar(modeloEntrada);
 });
 
-test('both entrance flaps receive a correctly scaled canvas weave without changing seams', () => {
+test('entrance borders receive paired stitches aligned along the opening', () => {
+  const builder = criarConstrutor();
+  let laterais = 0, superior = 0;
+  construirEntrada({...builder, viga: () => {}, superficie: (...args) => {
+    if (args[1].cor !== '#9c895f') return;
+    assert.equal(args[1].textura, 'costura');
+    const uv = args[6]; assert.ok(uv);
+    if (args[2] === 1 && args[3] === 6) {
+      laterais++;
+      for (const u of [0, .5, 1]) for (const v of [0, .25, .5, .75, 1]) {
+        const p = args[4](u, v), t = uv(u, v);
+        assert.ok(Math.abs(t[0] - u) < 1e-8);
+        assert.ok(Math.abs(t[1] - p[1] / PASSO_PONTO) < 1e-8, 'pontos laterais fora de escala');
+      }
+    } else {
+      assert.equal(args[2], 8); assert.equal(args[3], 1); superior++;
+      for (const u of [0, .25, .5, .75, 1]) for (const v of [0, .5, 1]) {
+        const p = args[4](u, v), t = uv(u, v);
+        assert.ok(Math.abs(t[0] - v) < 1e-8);
+        assert.ok(Math.abs(t[1] - (p[0] + DOOR_W) / PASSO_PONTO) < 1e-8, 'pontos superiores fora de escala');
+      }
+    }
+    builder.superficie(...args);
+  }});
+  assert.equal(laterais, 2); assert.equal(superior, 1);
+  const model = builder.montar(), borda = malhas(model)[0];
+  assert.equal(malhas(model).length, 1);
+  assert.equal(triangulos(borda), 40, 'geometria das bordas deve ser preservada');
+  assert.ok(borda.material.map instanceof T.DataTexture && borda.material.bumpMap instanceof T.DataTexture);
+  assert.equal(borda.material.side, T.DoubleSide);
+  assert.ok(borda.material.roughness > .8 && borda.material.bumpScale > 0);
+  const pos = borda.geometry.getAttribute('position'), uv = borda.geometry.getAttribute('uv');
+  assert.equal(pos.count, uv.count);
+  for (let i = 0; i < pos.count; i += 3) {
+    const xs = [0, 1, 2].map((k) => pos.getX(i + k));
+    const horizontal = Math.max(...xs) - Math.min(...xs) > .05;
+    for (let j = i; j < i + 3; j++) {
+      assert.ok(Math.abs(pos.getZ(j) - (HALF_D + .003)) < 1e-5, 'borda afastada da entrada');
+      assert.ok(Number.isFinite(uv.getX(j)) && Number.isFinite(uv.getY(j)));
+      assert.ok(uv.getX(j) >= 0 && uv.getX(j) <= 1);
+      const longitudinal = horizontal ? (pos.getX(j) + DOOR_W) : pos.getY(j);
+      assert.ok(Math.abs(uv.getY(j) - longitudinal / PASSO_PONTO) < 1e-4, 'UV longitudinal separado do vértice');
+      if (!horizontal) assert.ok(Math.abs(uv.getX(j) - (Math.abs(pos.getX(j)) - DOOR_W) / .035) < 1e-5);
+    }
+  }
+  const texturizada = renderModelPreview(model, {direcao: [0, 0, 10], largura: 700, altura: 700});
+  const mapa = borda.material.map; borda.material.map = null;
+  const lisa = renderModelPreview(model, {direcao: [0, 0, 10], largura: 700, altura: 700});
+  borda.material.map = mapa;
+  assert.ok(contarDiferencas(texturizada, lisa) > 50, 'pontos não aparecem na prévia');
+  descartar(model);
+});
+
+test('both entrance flaps receive a correctly scaled canvas weave', () => {
   const construirAbas = () => {
     const builder = criarConstrutor();
     let abas = 0;

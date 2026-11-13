@@ -1,6 +1,7 @@
 import type {ConstrutorTenda} from '../helpers';
 import {HALF_W, HALF_D, RIDGE, EAVE, DOOR_W, DOOR_H, lonaClara, lonaSombra, lonaCostura, corda} from '../types';
 import {uvParedeExtremidade} from '../canvasTexture';
+import {PASSO_PONTO} from '../seamTexture';
 
 /** Frente da tenda: abertura central de altura útil, com abas presas nas laterais. */
 export function construirEntrada({superficie, viga}: ConstrutorTenda) {
@@ -19,10 +20,13 @@ export function construirEntrada({superficie, viga}: ConstrutorTenda) {
     });
 
     // Bordas reforçadas definem claramente os limites da abertura.
-    superficie('lona', {cor: lonaCostura, duplaFace: true}, 1, 6, (u, v) => {
+    superficie('lona', {cor: lonaCostura, duplaFace: true, textura: 'costura'}, 1, 6, (u, v) => {
       const x = lado * (DOOR_W + u * .035);
       return [x, v * Math.min(DOOR_H, topo(x) - .004), frente + .003];
-    }, [0, 0, 1]);
+    }, [0, 0, 1], (u, v) => {
+      const x = lado * (DOOR_W + u * .035);
+      return [u, v * Math.min(DOOR_H, topo(x) - .004) / PASSO_PONTO];
+    });
 
     // A aba sobrepõe a borda da abertura e acompanha a parede. Apenas uma
     // pequena folga evita z-fighting, sem deixar uma placa suspensa na frente.
@@ -55,8 +59,8 @@ export function construirEntrada({superficie, viga}: ConstrutorTenda) {
     const x = (u * 2 - 1) * DOOR_W;
     return uvParedeExtremidade(x, DOOR_H + v * (topo(x) - DOOR_H));
   });
-  superficie('lona', {cor: lonaCostura, duplaFace: true}, 8, 1, (u, v) => {
+  superficie('lona', {cor: lonaCostura, duplaFace: true, textura: 'costura'}, 8, 1, (u, v) => {
     const x = (u * 2 - 1) * DOOR_W;
     return [x, Math.min(DOOR_H + v * .035, topo(x) - .004), frente + .003];
-  }, [0, 0, 1]);
+  }, [0, 0, 1], (u, v) => [v, u * 2 * DOOR_W / PASSO_PONTO]);
 }
