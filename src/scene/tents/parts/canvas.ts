@@ -1,7 +1,7 @@
 import type {ConstrutorTenda} from '../helpers';
 import {HALF_W, HALF_D, RIDGE, EAVE, lonaClara, lonaSombra, lonaCostura, lonaRemendo} from '../types';
 import type {Acabamento, Ponto} from '../types';
-import {TAMANHO_TRAMA} from '../canvasTexture';
+import {TAMANHO_TRAMA, uvParedeLateral, uvParedeExtremidade} from '../canvasTexture';
 
 const FAIXAS = 4, SEGMENTOS_COMPRIMENTO = 6, SEGMENTOS_AGUA = 6;
 const FOLGA_DETALHE = .006;
@@ -65,12 +65,14 @@ export function construirLona({superficie}: ConstrutorTenda) {
   for (const lado of [-1, 1]) {
     const segmentos = FAIXAS * SEGMENTOS_COMPRIMENTO;
     const alturaBeiral = (u: number) => amostrarAgua(lado, u, 1)[1];
-    superficie('lona', {cor: lonaSombra, duplaFace: true}, segmentos, 4, (u, v) => {
+    const pontoParede = (u: number, v: number): Ponto => {
       // Cada vértice superior coincide com o beiral, inclusive onde a lona cede.
       const z = (u - .5) * (HALF_D * 2);
       const x = lado * (HALF_W + Math.sin(Math.PI * u * 5) * .014 * v);
       return [x, alturaBeiral(u) * (1 - v), z];
-    }, [lado, .15, 0]);
+    };
+    superficie('lona', {cor: lonaSombra, duplaFace: true, textura: 'trama'}, segmentos, 4, pontoParede, [lado, .15, 0],
+      (u, v) => { const [, y, z] = pontoParede(u, v); return uvParedeLateral(z, y); });
     // Faixa junto à parede, sem prolongar a barra além das quinas.
     superficie('lona', {cor: lonaCostura, duplaFace: true}, segmentos, 1, (u, v) => {
       const altura = .05 + v * .07;
@@ -83,10 +85,10 @@ export function construirLona({superficie}: ConstrutorTenda) {
   // ---------- Lona: oitão dos fundos ----------
   // Os oitões compartilham as mesmas bordas das paredes e do telhado:
   // sem sobras retangulares nas quinas e sem sobreposição coplanar.
-  superficie('lona', {cor: lonaClara, duplaFace: true}, 8, 3, (u, v) => [
+  superficie('lona', {cor: lonaClara, duplaFace: true, textura: 'trama'}, 8, 3, (u, v) => [
     (u - .5) * 2 * HALF_W, v * EAVE, -HALF_D,
-  ], [0, 0, -1]);
-  superficie('lona', {cor: lonaSombra, duplaFace: true}, 8, 4, (u, v) => [
+  ], [0, 0, -1], (u, v) => uvParedeExtremidade((u - .5) * 2 * HALF_W, v * EAVE));
+  superficie('lona', {cor: lonaSombra, duplaFace: true, textura: 'trama'}, 8, 4, (u, v) => [
     (u - .5) * 2 * HALF_W * (1 - v), EAVE + v * (RIDGE - EAVE), -HALF_D,
-  ], [0, 0, -1]);
+  ], [0, 0, -1], (u, v) => uvParedeExtremidade((u - .5) * 2 * HALF_W * (1 - v), EAVE + v * (RIDGE - EAVE)));
 }

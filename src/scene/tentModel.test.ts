@@ -286,12 +286,20 @@ test('guy ropes wrap around both the ridge pole and the inclined stakes', () => 
   descartar(model);
 });
 
-test('roof canvas weave is seamless, deterministic and limited to the roof', () => {
-  const a = buildTentModel(), b = buildTentModel();
+test('roof canvas weave is seamless and deterministic', () => {
+  const construirTelhado = () => {
+    const builder = criarConstrutor();
+    let faixas = 0;
+    construirLona({...builder, superficie: (...args) => {
+      if (args[1].textura === 'trama' && faixas++ < 8) builder.superficie(...args);
+    }});
+    assert.equal(faixas, 12, 'o telhado e as quatro superfícies das paredes devem ter trama');
+    return builder.montar();
+  };
+  const a = construirTelhado(), b = construirTelhado();
   const roof = malhas(a).filter((m) => m.name === 'lona' && m.material.map instanceof T.DataTexture);
   const otherRoof = malhas(b).filter((m) => m.name === 'lona' && m.material.map instanceof T.DataTexture);
   assert.equal(roof.length, 2, 'as duas cores do telhado devem ter trama');
-  assert.equal(malhas(a).filter((m) => m.name === 'lona' && !m.material.map).length, 4, 'paredes e detalhes não devem ser alterados');
   const slopeLength = Math.hypot(HALF_W, RIDGE - EAVE);
   for (let n = 0; n < roof.length; n++) {
     const mesh = roof[n], map = mesh.material.map, bump = mesh.material.bumpMap;
@@ -315,6 +323,47 @@ test('roof canvas weave is seamless, deterministic and limited to the roof', () 
   }
   assert.equal(malhas(a.clone(true)).find((m) => m.material.map === roof[0].material.map)?.material, roof[0].material);
   descartar(a); descartar(b);
+});
+
+test('wall weave follows physical coordinates across each facade and leaves details untouched', () => {
+  const builder = criarConstrutor();
+  let faixas = 0, paredes = 0, frente = 0;
+  construirLona({...builder, superficie: (...args) => {
+    if (args[1].textura === 'trama' && faixas++ >= 8) { paredes++; builder.superficie(...args); }
+  }});
+  construirEntrada({...builder, superficie: (...args) => {
+    if (args[1].textura === 'trama') { frente++; builder.superficie(...args); }
+  }});
+  assert.equal(paredes, 4, 'duas laterais e duas partes do fundo');
+  assert.equal(frente, 3, 'dois lados e painel superior da frente');
+  const model = builder.montar();
+  let laterais = 0, fundos = 0, fachada = 0;
+  for (const mesh of malhas(model).filter((m) => m.name === 'lona')) {
+    assert.ok(mesh.material.map instanceof T.DataTexture && mesh.material.bumpMap instanceof T.DataTexture);
+    const pos = mesh.geometry.getAttribute('position'), uv = mesh.geometry.getAttribute('uv');
+    assert.equal(pos.count, uv.count);
+    for (let i = 0; i < pos.count; i += 3) {
+      const z = (pos.getZ(i) + pos.getZ(i + 1) + pos.getZ(i + 2)) / 3;
+      const extremidade = Math.abs(Math.abs(z) - HALF_D) < 1e-5;
+      if (extremidade) z < 0 ? fundos++ : fachada++; else laterais++;
+      for (let j = i; j < i + 3; j++) {
+        const horizontal = extremidade ? pos.getX(j) + HALF_W : pos.getZ(j) + HALF_D;
+        assert.ok(Math.abs(uv.getX(j) - horizontal / TAMANHO_TRAMA) < 1e-4, 'escala horizontal ou junção da trama incorreta');
+        assert.ok(Math.abs(uv.getY(j) - pos.getY(j) / TAMANHO_TRAMA) < 1e-4, 'escala vertical ou junção da trama incorreta');
+      }
+    }
+  }
+  assert.ok(laterais && fundos && fachada, 'faltam paredes texturizadas');
+  descartar(model);
+
+  const entrada = criarConstrutor();
+  construirEntrada(entrada);
+  const modeloEntrada = entrada.montar();
+  const flap = malhas(modeloEntrada).find((m) => m.name === 'lona' && m.material.color.getHexString() === 'cdba8c' && !m.material.map);
+  const seams = malhas(modeloEntrada).find((m) => m.name === 'lona' && m.material.color.getHexString() === '9c895f');
+  assert.ok(flap && !flap.material.bumpMap, 'abas devem ficar para outra etapa');
+  assert.ok(seams && !seams.material.map && !seams.material.bumpMap, 'costuras devem permanecer sem alteração');
+  descartar(modeloEntrada);
 });
 
 test('flipped canvas triangles keep their UV coordinates attached to the vertices', () => {
