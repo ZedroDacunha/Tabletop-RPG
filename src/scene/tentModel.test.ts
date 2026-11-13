@@ -420,9 +420,9 @@ test('rafters taper continuously with no internal caps and retain axial wood gra
   assert.equal(caibros, 4);
   const completo = buildTentModel();
   const estrutura = malhas(completo).filter((m) => m.name === 'estrutura');
-  assert.equal(estrutura.filter((m) => m.material.map instanceof T.DataTexture).length, 1, 'caibros e cumeeira devem compartilhar material');
+  assert.equal(estrutura.filter((m) => m.material.map instanceof T.DataTexture).length, 2, 'caibros/cumeeira e prumos devem ter seus acabamentos');
   assert.ok(estrutura.filter((m) => !m.material.map).every((m) => !m.material.bumpMap));
-  assert.ok(estrutura.some((m) => !m.material.map), 'prumos e sapatas devem ficar para outra etapa');
+  assert.ok(estrutura.some((m) => !m.material.map), 'sapatas devem ficar para outra etapa');
   const amostra = construidos[0], material = malhas(amostra)[0].material;
   const texturizada = renderModelPreview(amostra, {direcao: [3, 5, 8], largura: 600, altura: 600});
   const mapa = material.map; material.map = null;
@@ -431,6 +431,62 @@ test('rafters taper continuously with no internal caps and retain axial wood gra
   assert.ok(contarDiferencas(texturizada, lisa) > 100, 'textura dos caibros não aparece na prévia');
   for (const model of construidos) descartar(model);
   descartar(completo);
+});
+
+test('wall posts have axial wood texture and remain inside the canvas', () => {
+  const builder = criarConstrutor(), original = criarConstrutor();
+  let prumos = 0;
+  construirEstrutura({...builder, vigaReta: () => {}, caixa: () => {}, anel: () => {}, cilindro: (...args) => {
+    if (args[2][0] === 0) return;
+    prumos++;
+    assert.equal(args[1].textura, 'madeira-estrutura');
+    builder.cilindro(...args);
+    const [parte, {textura: _textura, ...acabamento}, ponto, topo, base, altura, rotacao, lados] = args;
+    original.cilindro(parte, acabamento, ponto, topo, base, altura, rotacao, lados);
+  }});
+  assert.equal(prumos, 4);
+  const model = builder.montar(), anterior = original.montar();
+  const mesh = malhas(model)[0], antigo = malhas(anterior)[0];
+  assert.equal(malhas(model).length, 1, 'prumos devem compartilhar material');
+  assert.deepEqual(Array.from(mesh.geometry.getAttribute('position').array), Array.from(antigo.geometry.getAttribute('position').array), 'prumos mudaram de forma');
+  assert.deepEqual(Array.from(mesh.geometry.index!.array), Array.from(antigo.geometry.index!.array));
+  assert.ok(mesh.material.map instanceof T.DataTexture && mesh.material.bumpMap instanceof T.DataTexture);
+  assert.equal(mesh.material.color.getHexString(), '65482e');
+  assert.ok(mesh.material.roughness > .8 && mesh.material.bumpScale > 0);
+  const pos = mesh.geometry.getAttribute('position'), normal = mesh.geometry.getAttribute('normal'), uv = mesh.geometry.getAttribute('uv');
+  assert.equal(uv.count, pos.count);
+  let laterais = 0, pontas = 0;
+  for (let i = 0; i < pos.count; i++) {
+    if (Math.abs(normal.getY(i)) > .5) {
+      pontas++;
+      assert.ok(uv.getX(i) >= 416 / 512 - 1e-6 && uv.getX(i) <= 504 / 512 + 1e-6);
+    } else {
+      laterais++;
+      assert.ok(Math.abs(uv.getY(i) - pos.getY(i) / COMPRIMENTO_REFERENCIA_MADEIRA) < 1e-5, 'veio do prumo não é vertical');
+      assert.ok(uv.getX(i) >= 8 / 512 - 1e-6 && uv.getX(i) <= 400 / 512 + 1e-6);
+    }
+  }
+  assert.ok(laterais && pontas);
+  const parede = criarConstrutor();
+  construirLona({...parede, superficie: (...args) => { if (args[2] === 24 && args[3] === 4) parede.superficie(...args); }});
+  const lona = parede.montar(), ray = new T.Raycaster();
+  for (const lado of [-1, 1]) for (const extremidade of [-1, 1]) {
+    let encontrados = 0;
+    for (let y = .008; y < .62; y += .006) for (let dz = -.04; dz <= .04; dz += .004) {
+      ray.set(new T.Vector3(lado * 1.5, y, extremidade * (HALF_D - .06) + dz), new T.Vector3(-lado, 0, 0));
+      const hit = ray.intersectObject(model, true)[0], pano = ray.intersectObject(lona, true)[0];
+      if (!hit) continue;
+      assert.ok(pano && hit.distance >= pano.distance + .001, `prumo atravessa a lona em ${lado}, ${extremidade}, ${y}`);
+      encontrados++;
+    }
+    assert.ok(encontrados > 20, 'prumo não encontrado');
+  }
+  const texturizada = renderModelPreview(model, {direcao: [3, 5, 8], largura: 600, altura: 600});
+  const mapa = mesh.material.map; mesh.material.map = null;
+  const lisa = renderModelPreview(model, {direcao: [3, 5, 8], largura: 600, altura: 600});
+  mesh.material.map = mapa;
+  assert.ok(contarDiferencas(texturizada, lisa) > 100, 'textura dos prumos não aparece na prévia');
+  descartar(model); descartar(anterior); descartar(lona);
 });
 
 test('roof canvas weave is seamless and deterministic', () => {
