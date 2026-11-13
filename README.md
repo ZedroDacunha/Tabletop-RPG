@@ -156,4 +156,12 @@ npm test
 npm run build
 ```
 
-A bateria contém 47 testes, incluindo catálogo, busca combinada, categorias, compatibilidade dos mapas e limites geométricos dos 32 novos modelos. A geometria é verificada sem GPU; a conferência visual no navegador disponível usa o modo compatível porque ele não disponibiliza WebGL. O desempenho e o acabamento da renderização WebGL em hardware real ainda precisam dessa verificação.
+A bateria contém 51 testes, incluindo catálogo, busca combinada, categorias, compatibilidade dos mapas e limites geométricos dos 32 novos modelos. A geometria é verificada sem GPU; a conferência visual no navegador disponível usa o modo compatível porque ele não disponibiliza WebGL. O desempenho e o acabamento da renderização WebGL em hardware real ainda precisam dessa verificação.
+
+
+
+## Árvores com estrutura e texturas refinadas
+
+Pinheiro, carvalho, bétula, árvore seca e salgueiro usam troncos curvos e afilados, raízes, ramificação secundária e materiais de casca com cor e relevo. As copas têm folhas recortadas com nervuras, variação de tom e lâminas dobradas; o pinheiro usa ramos de agulhas e o salgueiro tem ramos pendentes. Os cinco identificadores e o filtro Natureza → Árvores foram preservados, inclusive em mapas já salvos.
+
+Os modelos compartilham geometria e materiais entre cópias, com uma ou duas malhas por árvore. As miniaturas são geradas das mesmas geometrias e texturas por `npm run assets:previews`. Referências, limites e roteiro de validação: [docs/tree-models.md](docs/tree-models.md).

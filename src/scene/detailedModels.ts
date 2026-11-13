@@ -1,11 +1,13 @@
 import * as T from 'three';
 import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import {buildTreeModel} from './treeModels';
 import type {DetailedKind} from '../features/assets/detailedKinds';
 
 type V=[number,number,number];
 const wood='#866044',lightWood='#b18b5d',darkWood='#513c2e',iron='#394348',brass='#bb9454',stone='#939c91',cloth='#718b78';
 /** Hand-built geometry. Detail is baked and merged by material before rendering. */
 export function buildDetailedModel(kind:DetailedKind):T.Group {
+ if(kind==='willow')return buildTreeModel('willow');
  const root=new T.Group();const materials=new Map<string,T.MeshStandardMaterial>();
  const mat=(color:string,metal=0,emissive=false)=>{const key=`${color}/${metal}/${emissive}`;if(!materials.has(key))materials.set(key,new T.MeshStandardMaterial({color,roughness:metal?.4:.88,metalness:metal,flatShading:true,...(emissive?{emissive:color,emissiveIntensity:1.6}:{}),side:T.DoubleSide}));return materials.get(key)!};
  const mesh=(g:T.BufferGeometry,p:V,c:string,r:V=[0,0,0],s:V=[1,1,1],metal=0,emissive=false)=>{const m=new T.Mesh(g,mat(c,metal,emissive));m.position.set(...p);m.rotation.set(...r);m.scale.set(...s);root.add(m);return m};
@@ -21,10 +23,6 @@ export function buildDetailedModel(kind:DetailedKind):T.Group {
  const pot=(x:number,z:number,scale=1,c='#9f6650')=>{const points=[[.12,0],[.28,.08],[.36,.35],[.27,.55],[.18,.62],[.19,.69]].map(([a,b])=>new T.Vector2(a*scale,b*scale));mesh(new T.LatheGeometry(points,14),[x,0,z],c);cyl([x,.64*scale,z],.15*scale,.15*scale,.015,darkWood);ring([x,.69*scale,z],.19*scale,.025*scale,c)};
  const foliage=(x:number,y:number,z:number,scale:number,c:string)=>orb([x,y,z],[scale,scale*.7,scale*.85],c);
  switch(kind){
- case 'willow':
-  cyl([0,1.5,0],.18,.38,3,'#695743');
-  for(let i=0;i<7;i++){const a=i*Math.PI*2/7;const x=Math.cos(a),z=Math.sin(a);beam([0,1.8,0],[x*1.4,3.1,z*1.4],.12,'#695743');foliage(x,3.2,z,1.15,i%2?'#688867':'#8aa875');for(let j=0;j<3;j++){const y=2.6-j*.48;orb([x*(1.65+j*.07),y,z*(1.65+j*.07)],[.24,.62,.25],i%2?'#668467':'#7a9a70')}}
-  for(let i=0;i<5;i++){const a=i*1.25;beam([0,.12,0],[Math.cos(a)*.8,.04,Math.sin(a)*.8],.12,'#695743')}break;
  case 'fern':
   for(let i=0;i<9;i++){const a=i*2.4,len=.7+(i%3)*.13;const end:V=[Math.cos(a)*len,.25+i%2*.15,Math.sin(a)*len];beam([0,.03,0],end,.018,'#73924f');for(let j=1;j<5;j++){const t=j/5;for(const side of [-1,1]){const off=(1-t)*.24*side;const x=end[0]*t+Math.cos(a+Math.PI/2)*off,z=end[2]*t+Math.sin(a+Math.PI/2)*off;mesh(new T.OctahedronGeometry(1),[x,.1+end[1]*t,z],i%2?'#5f894c':'#8eab64',[.2,a,0],[.08,.025,.2*(1-t)+.05]);}}}break;
  case 'flowers':

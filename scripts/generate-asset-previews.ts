@@ -1,5 +1,8 @@
 /** Offline orthographic thumbnails from the exact 3D meshes. No GPU or external assets. */
 import * as T from 'three';
+import {TREE_KINDS,isTreeKind} from '../src/features/assets/treeKinds';
+import {buildTreeModel} from '../src/scene/treeModels';
+import {renderTreePreview} from './render-tree-preview';
 import {writeFileSync} from 'node:fs';
 import {deflateSync} from 'node:zlib';
 import {buildDetailedModel} from '../src/scene/detailedModels';
@@ -8,7 +11,8 @@ const crcTable=Array.from({length:256},(_,n)=>{let c=n;for(let k=0;k<8;k++)c=(c&
 function chunk(type:string,data:Buffer){const name=Buffer.from(type);const body=Buffer.concat([name,data]);let crc=0xffffffff;for(const b of body)crc=crcTable[(crc^b)&255]^(crc>>>8);const result=Buffer.alloc(body.length+8);result.writeUInt32BE(data.length,0);body.copy(result,4);result.writeUInt32BE((crc^0xffffffff)>>>0,body.length+4);return result}
 function png(rgba:Buffer,width:number,height:number){const header=Buffer.alloc(13);header.writeUInt32BE(width,0);header.writeUInt32BE(height,4);header[8]=8;header[9]=6;const rows=Buffer.alloc((width*4+1)*height);for(let y=0;y<height;y++)rgba.copy(rows,y*(width*4+1)+1,y*width*4,(y+1)*width*4);return Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]),chunk('IHDR',header),chunk('IDAT',deflateSync(rows)),chunk('IEND',Buffer.alloc(0))])}
 const previews:Record<string,string>={};
-for(const kind of DETAILED_KINDS){
+for(const kind of [...new Set([...DETAILED_KINDS,...TREE_KINDS])]){
+ if(isTreeKind(kind)){previews[kind]='data:image/png;base64,'+renderTreePreview(buildTreeModel(kind)).toString('base64');continue;}
  const model=buildDetailedModel(kind);model.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(model),center=bounds.getCenter(new T.Vector3());
  const camera=new T.OrthographicCamera(-5,5,5,-5,.1,100);camera.position.copy(center).add(new T.Vector3(7,5,8));camera.lookAt(center);camera.updateMatrixWorld(true);
  const faces:{p:T.Vector3[];depth:number;color:string}[]=[];const light=new T.Vector3(-.4,1,.7).normalize();let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
