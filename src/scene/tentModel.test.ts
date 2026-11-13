@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {inflateSync} from 'node:zlib';
 import * as T from 'three';
 import {buildTentModel} from './tentModel';
+import {criarConstrutor} from './tents/helpers';
+import {amostrarAgua, construirLona} from './tents/parts/canvas';
 import previews from '../features/assets/modelPreviews.json';
 import {direcaoDeAngulos, renderModelPreview} from '../../scripts/preview-raster';
 
@@ -69,6 +71,57 @@ test('entrance has a clear passage and canvas above and beside it', () => {
   }
   for (const [x, y] of [[0, 1.52], [0, 1.8], [-.4, 1.52], [.4, 1.52], [-.8, .4], [.8, .4]]) {
     assert.equal(naFrente(x, y)[0]?.object.name, 'lona', `frente aberta fora da porta em ${x}, ${y}`);
+  }
+  descartar(model);
+});
+
+test('roof patch and seams stay attached to the triangulated canvas', () => {
+  const builder = criarConstrutor();
+  construirLona(builder);
+  const model = builder.montar();
+  const meshes = malhas(model);
+  const isColor = (mesh: T.Mesh<T.BufferGeometry, T.MeshStandardMaterial>, color: string) => mesh.material.color.getHexString() === color;
+  const base = meshes.filter((m) => isColor(m, 'cdba8c') || isColor(m, 'c1ad80'));
+  const details = meshes.filter((m) => isColor(m, '9c895f') || isColor(m, 'd8c79b'));
+  const ray = new T.Raycaster();
+  let testedPatch = 0, testedSeams = 0, testedHem = 0;
+  for (const mesh of details) {
+    const p = mesh.geometry.getAttribute('position');
+    for (let i = 0; i < p.count; i += 3) {
+      const vertices = [0, 1, 2].map((k) => new T.Vector3().fromBufferAttribute(p, i + k));
+      // Amostra o centro e pontos próximos às três bordas dos triângulos.
+      for (const weights of [[1 / 3, 1 / 3, 1 / 3], [.8, .1, .1], [.1, .8, .1], [.1, .1, .8]]) {
+        const point = new T.Vector3();
+        vertices.forEach((vertex, k) => point.addScaledVector(vertex, weights[k]));
+        const roof = point.y > .25;
+        const direction = roof ? new T.Vector3(Math.sign(point.x) * .786, .618, 0) : new T.Vector3(Math.sign(point.x), 0, 0);
+        if (direction.x === 0) continue;
+        ray.set(point.clone().addScaledVector(direction, .03), direction.clone().negate());
+        const hit = ray.intersectObjects(base, false)[0];
+        assert.ok(hit, `detalhe sem lona sob ele: ${point.toArray()}`);
+        const gap = hit.distance - .03;
+        assert.ok(gap > .001 && gap < .012, `detalhe descolado ou atravessando a lona: ${gap}`);
+        if (isColor(mesh, 'd8c79b')) testedPatch++;
+        else if (roof) testedSeams++;
+        else testedHem++;
+      }
+    }
+  }
+  assert.ok(testedPatch > 0 && testedSeams > 0 && testedHem > 0);
+  descartar(model);
+});
+
+test('roof covers the rafters near both ends', () => {
+  const model = buildTentModel(), ray = new T.Raycaster();
+  const canvas = malhas(model).filter((m) => m.name === 'lona' && ['cdba8c', 'c1ad80'].includes(m.material.color.getHexString()));
+  const structure = malhas(model).filter((m) => m.name === 'estrutura');
+  for (const lado of [-1, 1]) for (const aoLongo of [.02, .03, .97, .98]) for (let v = .08; v < .94; v += .02) {
+    const pos = new T.Vector3(...amostrarAgua(lado, aoLongo, v));
+    const normal = new T.Vector3(lado * .786, .618, 0);
+    ray.set(pos.clone().addScaledVector(normal, .15), normal.clone().negate());
+    const pano = ray.intersectObjects(canvas, false)[0], madeira = ray.intersectObjects(structure, false)[0];
+    assert.ok(pano, 'lona ausente sobre o caibro');
+    if (madeira) assert.ok(madeira.distance >= pano.distance - .001, `caibro acima da lona em ${lado}, ${aoLongo}, ${v}`);
   }
   descartar(model);
 });
