@@ -3,7 +3,6 @@ import {construirLona} from './parts/canvas';
 import {construirEntrada} from './parts/entrance';
 import {construirEstrutura} from './parts/structure';
 import {construirCordasEEstacas} from './parts/ropes';
-import {construirInterior} from './parts/interior';
 
 /** Tenda de acampamento com peças agrupadas por material para economizar draw calls. */
 export function buildTentModel() {
@@ -12,6 +11,5 @@ export function buildTentModel() {
   construirEntrada(tenda);
   construirEstrutura(tenda);
   construirCordasEEstacas(tenda);
-  construirInterior(tenda);
   return tenda.montar();
 }

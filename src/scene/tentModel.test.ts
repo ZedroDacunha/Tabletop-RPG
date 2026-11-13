@@ -8,13 +8,14 @@ import {amostrarAgua, construirLona} from './tents/parts/canvas';
 import {construirEntrada} from './tents/parts/entrance';
 import {construirEstaca} from './tents/parts/stakes';
 import {construirEstrutura} from './tents/parts/structure';
+import {construirCordasEEstacas} from './tents/parts/ropes';
 import {COMPRIMENTO_REFERENCIA_MADEIRA} from './tents/structureWoodTexture';
 import {PASSO_CORDA} from './tents/ropeTexture';
 import {TAMANHO_TRAMA, alturaTrama, uvTelhado} from './tents/canvasTexture';
 import {INICIO_REMENDO, FIM_REMENDO, TOPO_REMENDO, BASE_REMENDO} from './tents/patchTexture';
 import {PASSO_PONTO} from './tents/seamTexture';
 import previews from '../features/assets/modelPreviews.json';
-import {direcaoDeAngulos, renderModelPreview} from '../../scripts/preview-raster';
+import {renderModelPreview} from '../../scripts/preview-raster';
 
 const HALF_W = 1.24, HALF_D = 1.6, RIDGE = 2.18, EAVE = .62, DOOR_W = .52;
 function malhas(model: T.Group) { return model.children as T.Mesh<T.BufferGeometry, T.MeshStandardMaterial>[]; }
@@ -42,7 +43,7 @@ function triangulos(m: T.Mesh) { const p = m.geometry.getAttribute('position'); 
 /** meia largura interna da tenda na altura `y` (o perfil do oitão é um triângulo). */
 function meiaLarguraEm(y: number) { return y <= EAVE ? HALF_W : HALF_W * (1 - (y - EAVE) / (RIDGE - EAVE)); }
 
-test('tent is assembled from the five declared parts inside the draw-call and triangle budget', () => {
+test('tent is assembled from its four parts inside the draw-call and triangle budget', () => {
   const model = buildTentModel(), partes = new Map<string, {malhas: number; triangulos: number}>();
   let total = 0;
   for (const m of malhas(model)) {
@@ -52,9 +53,9 @@ test('tent is assembled from the five declared parts inside the draw-call and tr
     assert.ok(m.castShadow && m.receiveShadow, `${m.name} sem sombra`);
     assert.ok(m.material.side === T.FrontSide || m.material.side === T.DoubleSide);
   }
-  assert.deepEqual([...partes.keys()].sort(), ['cordas', 'estacas', 'estrutura', 'interior', 'lona']);
-  for (const parte of ['lona', 'estrutura', 'cordas', 'estacas', 'interior'] as const) assert.ok((partes.get(parte)?.malhas ?? 0) > 0, `${parte} ausente`);
-  // lona e estrutura são as partes densas; cordas e interior existem só para leitura de perto.
+  assert.deepEqual([...partes.keys()].sort(), ['cordas', 'estacas', 'estrutura', 'lona']);
+  for (const parte of ['lona', 'estrutura', 'cordas', 'estacas'] as const) assert.ok((partes.get(parte)?.malhas ?? 0) > 0, `${parte} ausente`);
+  // As peças externas mantêm seus limites de malhas.
   assert.ok(partes.get('lona')!.malhas <= 6, 'lona fragmentada demais');
   assert.ok(partes.get('estrutura')!.malhas <= 3, 'estrutura fragmentada demais');
   const bounds = new T.Box3().setFromObject(model);
@@ -81,6 +82,36 @@ test('entrance has a clear passage and canvas above and beside it', () => {
     assert.equal(naFrente(x, y)[0]?.object.name, 'lona', `frente aberta fora da porta em ${x}, ${y}`);
   }
   descartar(model);
+});
+
+test('tent interior is clear for custom assets, including the floor', () => {
+  const model = buildTentModel(), ray = new T.Raycaster();
+  // Amostra da porta até o fundo: nem acessórios nem suas cordas devem permanecer.
+  for (const x of [-.8, -.42, 0, .38, .8]) for (const y of [.05, .13, .22, .34, .5, .8, 1.1]) {
+    ray.set(new T.Vector3(x, y, HALF_D - .1), new T.Vector3(0, 0, -1));
+    const hit = ray.intersectObject(model, true)[0];
+    assert.ok(hit && hit.object.name === 'lona' && hit.point.z < -HALF_D + .01,
+      `interior obstruído em x=${x}, y=${y}: ${hit?.object.name}, z=${hit?.point.z}`);
+  }
+  // Sem tapete de chão, para que o cenário e os assets futuros fiquem visíveis.
+  for (const x of [-.8, -.42, 0, .38, .8]) for (const z of [-1.2, -.6, 0, .6, 1.2]) {
+    ray.set(new T.Vector3(x, .5, z), new T.Vector3(0, -1, 0));
+    assert.equal(ray.intersectObject(model, true).length, 0, `chão obstruído em ${x}, ${z}`);
+  }
+  // Compara também a geometria das cordas: acessórios tinham anéis incorporados
+  // à mesma malha que as amarrações externas, não apenas na parte 'interior'.
+  const builder = criarConstrutor();
+  construirLona(builder); construirEntrada(builder); construirEstrutura(builder); construirCordasEEstacas(builder);
+  const exterior = builder.montar();
+  assert.equal(malhas(model).length, malhas(exterior).length);
+  for (let i = 0; i < malhas(model).length; i++) {
+    const atual = malhas(model)[i], esperado = malhas(exterior)[i];
+    assert.equal(atual.name, esperado.name);
+    assert.equal(atual.material.color.getHexString(), esperado.material.color.getHexString());
+    assert.deepEqual(Array.from(atual.geometry.getAttribute('position').array), Array.from(esperado.geometry.getAttribute('position').array));
+    assert.deepEqual(atual.geometry.index ? Array.from(atual.geometry.index.array) : null, esperado.geometry.index ? Array.from(esperado.geometry.index.array) : null);
+  }
+  descartar(exterior); descartar(model);
 });
 
 test('entrance flaps and their ties stay close to the front canvas on both sides', () => {
@@ -125,7 +156,7 @@ test('entrance flaps and their ties stay close to the front canvas on both sides
 
 test('the entrance looks through the interior without the dark panel', () => {
   const model = buildTentModel(), ray = new T.Raycaster();
-  // A linha de visão passa acima dos acessórios, da entrada até a lona dos fundos.
+  // A linha de visão passa pela entrada até a lona dos fundos.
   for (const x of [-.15, 0, .15]) for (const y of [.75, 1.1]) {
     ray.set(new T.Vector3(x, y, HALF_D - .1), new T.Vector3(0, 0, -1));
     const hit = ray.intersectObject(model, true)[0];
@@ -133,10 +164,6 @@ test('the entrance looks through the interior without the dark panel', () => {
     assert.equal(hit.object.name, 'lona', `objeto obstrui o interior em ${x}, ${y}`);
     assert.ok(hit.point.z < -HALF_D + .1, 'obstáculo antes dos fundos');
   }
-  // O piso e os dois acessórios continuam presentes.
-  const coresInterior = malhas(model).filter((m) => m.name === 'interior').map((m) => m.material.color.getHexString());
-  for (const cor of ['8b7c5c', 'b3a075', '6d5a3e']) assert.ok(coresInterior.includes(cor));
-  assert.ok(!coresInterior.includes('332f26'));
   descartar(model);
 });
 
@@ -943,28 +970,13 @@ test('model preview renders the rope texture', () => {
   descartar(model);
 });
 
-test('interior props stay inside the canvas so nothing pokes through the roof', () => {
-  const model = buildTentModel();
-  for (const m of malhas(model)) {
-    if (m.name !== 'interior') continue;
-    const p = m.geometry.getAttribute('position');
-    for (let i = 0; i < p.count; i++) {
-      const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
-      assert.ok(y >= -.05 && y <= RIDGE - .05, `interior acima da cumeeira: ${y.toFixed(2)}`);
-      assert.ok(Math.abs(x) <= meiaLarguraEm(y) - .02, `interior furando a lona em x=${x.toFixed(2)}, y=${y.toFixed(2)}`);
-      assert.ok(Math.abs(z) <= HALF_D - .02, `interior furando o oitão em z=${z.toFixed(2)}`);
-    }
-  }
-  descartar(model);
-});
-
-test('every outside sightline lands on canvas or structure, never on the interior', () => {
+test('canvas and structure cover outside sightlines away from the entrance', () => {
   const model = buildTentModel(), raio = new T.Raycaster(), olho = new T.Vector3(), alvo = new T.Vector3();
   const disparar = (origem: T.Vector3, direcao: T.Vector3, x: number, y: number) => {
     raio.set(origem, direcao);
     const toques = raio.intersectObject(model, true);
     assert.ok(toques.length > 0, `vista aberta em (${x.toFixed(2)}, ${y.toFixed(2)})`);
-    assert.notEqual((toques[0].object as T.Mesh).name, 'interior', `interior visível em (${x.toFixed(2)}, ${y.toFixed(2)})`);
+    assert.ok(toques.some((hit) => hit.object.name === 'lona' || hit.object.name === 'estrutura'), 'lona ou estrutura ausente');
   };
   for (let y = .1; y <= RIDGE - .1; y += .12) {
     const limite = meiaLarguraEm(y) - .06;
@@ -1016,28 +1028,4 @@ test('tent builds deterministically and ships a preview thumbnail', () => {
   assert.ok(String(previews.tent).length > 4000, 'miniatura da tenda vazia');
   assert.equal(previews.tent, 'data:image/png;base64,' + renderModelPreview(a).toString('base64'), 'miniatura desatualizada');
   descartar(a); descartar(b);
-});
-
-test('nothing from inside shows through the canvas in a rendered view', () => {
-  // A miniatura usa o mesmo rasterizador da biblioteca. A referência mantém só o pano
-  // de chão (que encosta na lona por dentro) e remove o resto do interior: se a lona
-  // de fundo ou algum objeto aparecer por fora, a imagem muda.
-  for (const azimute of [90, 120, 210, 270]) {
-    const direcao = direcaoDeAngulos({azimute, elevacao: 20});
-    const completo = buildTentModel(), soChao = buildTentModel();
-    for (const m of [...soChao.children] as T.Mesh<T.BufferGeometry, T.MeshStandardMaterial>[]) {
-      if (m.name !== 'interior' || m.material.color.getHexString() === '8b7c5c') continue;
-      soChao.remove(m); m.geometry.dispose(); m.material.dispose();
-    }
-    const caixaA = new T.Box3().setFromObject(completo), caixaB = new T.Box3().setFromObject(soChao);
-    assert.ok(caixaA.min.equals(caixaB.min) && caixaA.max.equals(caixaB.max), 'interior altera o enquadramento');
-    const comPecas = renderModelPreview(completo, {direcao, largura: 320, altura: 240});
-    const semPecas = renderModelPreview(soChao, {direcao, largura: 320, altura: 240});
-    // O rasterizador amostra o centro do pixel: nas vistas rasantes sobram até
-    // alguns pixels isolados no encontro do beiral. O defeito que este teste
-    // protege (pano de fundo atravessando a lona) ocupava centenas de pixels.
-    const diferentes = contarDiferencas(comPecas, semPecas);
-    assert.ok(diferentes <= 8, `interior visível por fora na vista ${azimute}°: ${diferentes} pixels`);
-    descartar(completo); descartar(soChao);
-  }
 });
