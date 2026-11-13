@@ -4,6 +4,7 @@ import type {ParteTenda as Parte, Acabamento, Ponto} from './types';
 import {criarTexturasCorda, PASSO_CORDA} from './ropeTexture';
 import {criarTexturasMadeiraEstaca} from './woodTexture';
 import {criarTexturasLona} from './canvasTexture';
+import {criarTexturasCostura} from './seamTexture';
 
 /** Agrupa as geometrias por parte e acabamento para limitar as draw calls. */
 export function criarConstrutor() {
@@ -120,6 +121,7 @@ export function criarConstrutor() {
         ...(chave.startsWith('cordas|') ? {...criarTexturasCorda(), bumpScale: .0015} : {}),
         ...(chave.startsWith('estacas|') ? {...criarTexturasMadeiraEstaca(), bumpScale: .0015} : {}),
         ...(acabamento.textura === 'trama' ? {...criarTexturasLona(), bumpScale: .0007} : {}),
+        ...(acabamento.textura === 'costura' ? {...criarTexturasCostura(), bumpScale: .0005} : {}),
       });
       const malha = new T.Mesh(fundida, material);
       malha.name = chave.split('|')[0];

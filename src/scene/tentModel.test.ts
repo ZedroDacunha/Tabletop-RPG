@@ -9,6 +9,7 @@ import {construirEntrada} from './tents/parts/entrance';
 import {construirEstaca} from './tents/parts/stakes';
 import {PASSO_CORDA} from './tents/ropeTexture';
 import {TAMANHO_TRAMA} from './tents/canvasTexture';
+import {PASSO_PONTO} from './tents/seamTexture';
 import previews from '../features/assets/modelPreviews.json';
 import {direcaoDeAngulos, renderModelPreview} from '../../scripts/preview-raster';
 
@@ -207,7 +208,7 @@ test('canvas edges meet at the eaves and end walls without projecting past the c
 
 test('entrance borders stay below the roof profile', () => {
   const model = buildTentModel();
-  const border = malhas(model).find((m) => m.name === 'lona' && m.material.color.getHexString() === '9c895f');
+  const border = malhas(model).find((m) => m.name === 'lona' && m.material.color.getHexString() === '9c895f' && !m.material.map);
   assert.ok(border);
   const pos = border.geometry.getAttribute('position');
   let checked = 0;
@@ -325,17 +326,72 @@ test('roof canvas weave is seamless and deterministic', () => {
   descartar(a); descartar(b);
 });
 
+test('roof seams have continuous paired stitches without changing the other borders', () => {
+  const builder = criarConstrutor();
+  const metades: {ponto: (u: number, v: number) => [number, number, number]; uv: (u: number, v: number) => [number, number]}[] = [];
+  let cumeeiras = 0;
+  construirLona({...builder, superficie: (...args) => {
+    if (args[1].textura !== 'costura') return;
+    const uv = args[6]; assert.ok(uv);
+    if (args[2] === 1 && args[3] === 6) {
+      metades.push({ponto: args[4], uv});
+      for (const v of [0, .25, .5, .75, 1]) {
+        assert.ok(Math.abs(uv(0, v)[0] - .5) < 1e-8);
+        assert.ok(Math.abs(uv(0, v)[1] - v * Math.hypot(HALF_W, RIDGE - EAVE) / PASSO_PONTO) < 1e-8);
+      }
+      assert.ok(Math.abs(Math.abs(uv(1, .5)[0] - .5) - .5) < 1e-8);
+    } else {
+      assert.equal(args[2], 24); assert.equal(args[3], 1); cumeeiras++;
+      for (const u of [0, .25, .5, .75, 1]) {
+        assert.ok(Math.abs(uv(u, .5)[1] - u * 2 * HALF_D / PASSO_PONTO) < 1e-8);
+        assert.equal(uv(u, 0)[0], 0); assert.equal(uv(u, 1)[0], 1);
+      }
+    }
+    builder.superficie(...args);
+  }});
+  assert.equal(metades.length, 12); assert.equal(cumeeiras, 2);
+  for (let i = 0; i < metades.length; i += 2) for (const v of [0, .25, .5, .75, 1]) {
+    assert.deepEqual(metades[i].ponto(0, v), metades[i + 1].ponto(0, v));
+    assert.deepEqual(metades[i].uv(0, v), metades[i + 1].uv(0, v));
+    assert.deepEqual([metades[i].uv(1, v)[0], metades[i + 1].uv(1, v)[0]].sort(), [0, 1]);
+  }
+  const model = builder.montar(), seam = malhas(model)[0];
+  assert.equal(malhas(model).length, 1, 'costuras do telhado devem compartilhar material');
+  assert.equal(triangulos(seam), 240, 'geometria das costuras deve ser preservada');
+  assert.ok(seam.material.map instanceof T.DataTexture && seam.material.bumpMap instanceof T.DataTexture);
+  assert.equal(seam.material.map.colorSpace, T.SRGBColorSpace);
+  assert.equal(seam.material.bumpMap.colorSpace, T.NoColorSpace);
+  assert.equal(seam.material.map.wrapT, T.RepeatWrapping);
+  assert.ok(seam.material.map.generateMipmaps && seam.material.roughness > .8 && seam.material.bumpScale > 0);
+  assert.equal(seam.geometry.getAttribute('uv').count, seam.geometry.getAttribute('position').count);
+  const data = seam.material.bumpMap.image.data as Uint8Array;
+  const amostra = (u: number, v: number) => data[(Math.floor(v * 128) * 128 + Math.floor(u * 128)) * 4];
+  assert.ok(amostra(.27, .5) > amostra(.27, .05) + 40, 'ponto sem relevo');
+  assert.ok(amostra(.73, .5) > amostra(.5, .5) + 40, 'segunda carreira ausente');
+  const copia = criarConstrutor(); construirLona(copia); const outro = copia.montar();
+  const outraCostura = malhas(outro).find((m) => m.material.color.getHexString() === '9c895f' && m.material.map)!;
+  assert.deepEqual(seam.material.map.image.data, (outraCostura.material.map as T.DataTexture).image.data);
+  const barra = malhas(outro).find((m) => m.material.color.getHexString() === '9c895f' && !m.material.map);
+  assert.ok(barra && !barra.material.bumpMap, 'barra lateral deve ficar para outra etapa');
+  const comTextura = renderModelPreview(model, {largura: 700, altura: 500});
+  const mapa = seam.material.map; seam.material.map = null;
+  const semTextura = renderModelPreview(model, {largura: 700, altura: 500});
+  seam.material.map = mapa;
+  assert.ok(contarDiferencas(comTextura, semTextura) > 50, 'costura não aparece na prévia');
+  descartar(model); descartar(outro);
+});
+
 test('roof patch has a scaled weave aligned to the underlying canvas', () => {
   const criar = () => { const b = criarConstrutor(); construirLona(b); return b.montar(); };
   const model = criar(), outro = criar();
   const patch = malhas(model).find((m) => m.material.color.getHexString() === 'd8c79b')!;
   const outroPatch = malhas(outro).find((m) => m.material.color.getHexString() === 'd8c79b')!;
-  const seams = malhas(model).find((m) => m.material.color.getHexString() === '9c895f')!;
+  const seams = malhas(model).find((m) => m.material.color.getHexString() === '9c895f' && !m.material.map)!;
   assert.ok(patch.material.map instanceof T.DataTexture && patch.material.bumpMap instanceof T.DataTexture);
   assert.equal(patch.material.side, T.DoubleSide);
   assert.ok(patch.material.roughness > .8 && patch.material.bumpScale > 0);
   assert.deepEqual(patch.material.map.image.data, (outroPatch.material.map as T.DataTexture).image.data);
-  assert.ok(!seams.material.map && !seams.material.bumpMap, 'costuras permanecem para outra etapa');
+  assert.ok(!seams.material.map && !seams.material.bumpMap, 'barra lateral permanece para outra etapa');
   const pos = patch.geometry.getAttribute('position'), uv = patch.geometry.getAttribute('uv');
   assert.equal(pos.count, 12, 'geometria do remendo deve continuar com quatro triângulos');
   assert.equal(uv.count, pos.count);
