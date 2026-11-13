@@ -86,6 +86,17 @@ export function criarConstrutor() {
     guardar(parte, acabamento, g.applyMatrix4(m));
   };
 
+  /** Caibro reto com um único afilamento e sem tampas internas na junção. */
+  const vigaReta = (parte: Parte, acabamento: Acabamento, a: Ponto, b: Ponto, raio: number) => {
+    const inicio = new T.Vector3(...a), fim = new T.Vector3(...b);
+    const eixo = fim.clone().sub(inicio), comprimento = eixo.length();
+    const g = new T.CylinderGeometry(raio * .85, raio, comprimento, 7, 2, false);
+    if (acabamento.textura === 'madeira-estrutura') ajustarUvMadeira(g, 0, comprimento);
+    const m = new T.Matrix4().compose(inicio.clone().add(fim).multiplyScalar(.5),
+      new T.Quaternion().setFromUnitVectors(new T.Vector3(0, 1, 0), eixo.normalize()), new T.Vector3(1, 1, 1));
+    guardar(parte, acabamento, g.applyMatrix4(m));
+  };
+
   /** Viga entre dois pontos, com leve barriga quando é corda. */
   const viga = (parte: Parte, acabamento: Acabamento, a: Ponto, b: Ponto, raio: number, barriga = 0) => {
     const inicio = new T.Vector3(...a), fim = new T.Vector3(...b);
@@ -138,7 +149,7 @@ export function criarConstrutor() {
     });
     return modelo;
   };
-  return {guardar, superficie, caixa, cilindro, anel, viga, montar};
+  return {guardar, superficie, caixa, cilindro, anel, viga, vigaReta, montar};
 }
 
 export type ConstrutorTenda = ReturnType<typeof criarConstrutor>;
