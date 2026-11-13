@@ -110,7 +110,16 @@ try {
     'rolar o acervo não move abas, busca nem filtros',
     `scrollTop ${depois.rolou ? '>' : '='} 40`,
   );
-  await page.evaluate(() => { const s = document.querySelector('.library-scroll'); s.scrollTop = 0; });
+  await page.evaluate(() => { const s = document.querySelector('.library-scroll'); s.style.scrollBehavior = 'auto'; s.scrollTop = 0; });
+  await esperar(700);
+  const rotulo = await page.evaluate(() => {
+    const s = document.querySelector('.library-scroll');
+    const rot = s.querySelector('.collection-label');
+    if (!rot) return { existe: false };
+    const a = s.getBoundingClientRect(), b = rot.getBoundingClientRect();
+    return { existe: true, visivel: b.top >= a.top - 1 && b.bottom <= a.bottom, texto: rot.textContent.replace(/\s+/g, ' ').trim() };
+  });
+  registrar(rotulo.existe && rotulo.visivel, 'o rótulo do acervo aparece no topo da lista', JSON.stringify(rotulo));
   await page.screenshot({ path: path.join(capturas, 'biblioteca-acervo.jpg'), type: 'jpeg', quality: 84 });
   registrar(true, 'captura da aba Biblioteca');
 
