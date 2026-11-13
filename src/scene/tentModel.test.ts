@@ -7,6 +7,8 @@ import {criarConstrutor} from './tents/helpers';
 import {amostrarAgua, construirLona} from './tents/parts/canvas';
 import {construirEntrada} from './tents/parts/entrance';
 import {construirEstaca} from './tents/parts/stakes';
+import {construirEstrutura} from './tents/parts/structure';
+import {COMPRIMENTO_REFERENCIA_MADEIRA} from './tents/structureWoodTexture';
 import {PASSO_CORDA} from './tents/ropeTexture';
 import {TAMANHO_TRAMA, alturaTrama, uvTelhado} from './tents/canvasTexture';
 import {INICIO_REMENDO, FIM_REMENDO, TOPO_REMENDO, BASE_REMENDO} from './tents/patchTexture';
@@ -288,12 +290,18 @@ test('guy ropes wrap around both the ridge pole and the inclined stakes', () => 
   descartar(model);
 });
 
-test('ridge pole keeps its shape and gets axial wood grain and end rings only', () => {
-  const a = buildTentModel(), b = buildTentModel();
+test('ridge pole keeps its shape and gets axial wood grain and end rings', () => {
+  const criarCumeeira = () => {
+    const builder = criarConstrutor();
+    construirEstrutura({...builder, viga: () => {}, caixa: () => {}, anel: () => {}, cilindro: (...args) => {
+      if (args[2][0] === 0 && args[2][1] === RIDGE) builder.cilindro(...args);
+    }});
+    return builder.montar();
+  };
+  const a = criarCumeeira(), b = criarCumeeira();
   const estrutura = malhas(a).filter((m) => m.name === 'estrutura');
   const texturizadas = estrutura.filter((m) => m.material.map instanceof T.DataTexture);
-  assert.equal(texturizadas.length, 1, 'apenas a cumeeira deve receber textura');
-  assert.ok(estrutura.filter((m) => m !== texturizadas[0]).every((m) => !m.material.map && !m.material.bumpMap));
+  assert.equal(texturizadas.length, 1, 'a cumeeira deve receber textura');
   const pole = texturizadas[0], map = pole.material.map as T.DataTexture, bump = pole.material.bumpMap;
   const outro = malhas(b).find((m) => m.name === 'estrutura' && m.material.map instanceof T.DataTexture)!;
   assert.ok(bump instanceof T.DataTexture);
@@ -336,6 +344,59 @@ test('ridge pole keeps its shape and gets axial wood grain and end rings only', 
   pole.material.map = map;
   assert.ok(contarDiferencas(texturizada, lisa) > 100, 'madeira não aparece na prévia');
   geometry.dispose(); descartar(a); descartar(b);
+});
+
+test('rafters receive continuous axial wood grain without changing their shapes or posts', () => {
+  const detector = criarConstrutor();
+  const construidos: T.Group[] = []; let caibros = 0;
+  construirEstrutura({...detector, cilindro: () => {}, caixa: () => {}, anel: () => {}, viga: (...args) => {
+    caibros++;
+    assert.equal(args[1].textura, 'madeira-estrutura');
+    const [parte, acabamento, a, b, raio, barriga] = args;
+    const builder = criarConstrutor(), original = criarConstrutor();
+    builder.viga(parte, acabamento, a, b, raio, barriga);
+    const {textura: _textura, ...semTextura} = acabamento;
+    original.viga(parte, semTextura, a, b, raio, barriga);
+    const model = builder.montar(), anterior = original.montar();
+    construidos.push(model);
+    const mesh = malhas(model)[0], geometria = mesh.geometry;
+    assert.deepEqual(Array.from(geometria.getAttribute('position').array), Array.from(malhas(anterior)[0].geometry.getAttribute('position').array));
+    assert.deepEqual(Array.from(geometria.index!.array), Array.from(malhas(anterior)[0].geometry.index!.array));
+    assert.ok(mesh.material.map instanceof T.DataTexture && mesh.material.bumpMap instanceof T.DataTexture);
+    const inicio = new T.Vector3(...a), fim = new T.Vector3(...b), eixo = fim.clone().sub(inicio).normalize();
+    const comprimento = fim.distanceTo(inicio), pos = geometria.getAttribute('position');
+    const normal = geometria.getAttribute('normal'), uv = geometria.getAttribute('uv');
+    let meio = 0, tampas = 0, corpo = 0;
+    for (let i = 0; i < pos.count; i++) {
+      const n = new T.Vector3().fromBufferAttribute(normal, i), p = new T.Vector3().fromBufferAttribute(pos, i);
+      if (Math.abs(n.dot(eixo)) > .5) {
+        tampas++;
+        assert.ok(uv.getX(i) >= 416 / 512 - 1e-6 && uv.getX(i) <= 504 / 512 + 1e-6);
+      } else {
+        corpo++;
+        const distancia = p.sub(inicio).dot(eixo);
+        assert.ok(Math.abs(uv.getY(i) - distancia / COMPRIMENTO_REFERENCIA_MADEIRA) < 1e-5, 'veio desalinhado na junção');
+        assert.ok(uv.getX(i) >= 8 / 512 - 1e-6 && uv.getX(i) <= 400 / 512 + 1e-6);
+        if (Math.abs(distancia - comprimento / 2) < 1e-5) meio++;
+      }
+    }
+    assert.ok(meio >= 16 && corpo && tampas, 'junção ou pontas ausentes');
+    descartar(anterior);
+  }});
+  assert.equal(caibros, 4);
+  const completo = buildTentModel();
+  const estrutura = malhas(completo).filter((m) => m.name === 'estrutura');
+  assert.equal(estrutura.filter((m) => m.material.map instanceof T.DataTexture).length, 1, 'caibros e cumeeira devem compartilhar material');
+  assert.ok(estrutura.filter((m) => !m.material.map).every((m) => !m.material.bumpMap));
+  assert.ok(estrutura.some((m) => !m.material.map), 'prumos e sapatas devem ficar para outra etapa');
+  const amostra = construidos[0], material = malhas(amostra)[0].material;
+  const texturizada = renderModelPreview(amostra, {direcao: [3, 5, 8], largura: 600, altura: 600});
+  const mapa = material.map; material.map = null;
+  const lisa = renderModelPreview(amostra, {direcao: [3, 5, 8], largura: 600, altura: 600});
+  material.map = mapa;
+  assert.ok(contarDiferencas(texturizada, lisa) > 100, 'textura dos caibros não aparece na prévia');
+  for (const model of construidos) descartar(model);
+  descartar(completo);
 });
 
 test('roof canvas weave is seamless and deterministic', () => {
