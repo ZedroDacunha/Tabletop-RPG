@@ -326,12 +326,12 @@ test('roof canvas weave is seamless and deterministic', () => {
   descartar(a); descartar(b);
 });
 
-test('roof seams have continuous paired stitches without changing the other borders', () => {
+test('roof seams have continuous paired stitches', () => {
   const builder = criarConstrutor();
   const metades: {ponto: (u: number, v: number) => [number, number, number]; uv: (u: number, v: number) => [number, number]}[] = [];
   let cumeeiras = 0;
   construirLona({...builder, superficie: (...args) => {
-    if (args[1].textura !== 'costura') return;
+    if (args[1].textura !== 'costura' || args[4](.5, .5)[1] < .2) return;
     const uv = args[6]; assert.ok(uv);
     if (args[2] === 1 && args[3] === 6) {
       metades.push({ponto: args[4], uv});
@@ -371,8 +371,6 @@ test('roof seams have continuous paired stitches without changing the other bord
   const copia = criarConstrutor(); construirLona(copia); const outro = copia.montar();
   const outraCostura = malhas(outro).find((m) => m.material.color.getHexString() === '9c895f' && m.material.map)!;
   assert.deepEqual(seam.material.map.image.data, (outraCostura.material.map as T.DataTexture).image.data);
-  const barra = malhas(outro).find((m) => m.material.color.getHexString() === '9c895f' && !m.material.map);
-  assert.ok(barra && !barra.material.bumpMap, 'barra lateral deve ficar para outra etapa');
   const comTextura = renderModelPreview(model, {largura: 700, altura: 500});
   const mapa = seam.material.map; seam.material.map = null;
   const semTextura = renderModelPreview(model, {largura: 700, altura: 500});
@@ -381,17 +379,55 @@ test('roof seams have continuous paired stitches without changing the other bord
   descartar(model); descartar(outro);
 });
 
+test('ground hems have paired stitches following both walls', () => {
+  const builder = criarConstrutor(); let barras = 0;
+  construirLona({...builder, superficie: (...args) => {
+    if (args[1].cor !== '#9c895f' || args[4](.5, .5)[1] >= .2) return;
+    barras++;
+    assert.equal(args[1].textura, 'costura');
+    assert.equal(args[2], 24); assert.equal(args[3], 1);
+    const uv = args[6]; assert.ok(uv);
+    for (const u of [0, .25, .5, .75, 1]) for (const v of [0, .5, 1]) {
+      const p = args[4](u, v), t = uv(u, v);
+      assert.ok(Math.abs(t[0] - (p[1] - .05) / .07) < 1e-8);
+      assert.ok(Math.abs(t[1] - (p[2] + HALF_D) / PASSO_PONTO) < 1e-8);
+    }
+    builder.superficie(...args);
+  }});
+  assert.equal(barras, 2, 'uma barra de cada lado');
+  const model = builder.montar(), barra = malhas(model)[0];
+  assert.equal(malhas(model).length, 1);
+  assert.equal(triangulos(barra), 96, 'a geometria da barra deve ser preservada');
+  assert.ok(barra.material.map instanceof T.DataTexture && barra.material.bumpMap instanceof T.DataTexture);
+  assert.equal(barra.material.side, T.DoubleSide);
+  assert.ok(barra.material.roughness > .8 && barra.material.bumpScale > 0);
+  const pos = barra.geometry.getAttribute('position'), uv = barra.geometry.getAttribute('uv');
+  assert.equal(pos.count, uv.count);
+  let esquerda = 0, direita = 0;
+  for (let i = 0; i < pos.count; i++) {
+    pos.getX(i) < 0 ? esquerda++ : direita++;
+    assert.ok(Math.abs(pos.getZ(i)) <= HALF_D + 1e-5, 'barra ultrapassa a quina');
+    assert.ok(Math.abs(uv.getX(i) - (pos.getY(i) - .05) / .07) < 1e-5);
+    assert.ok(Math.abs(uv.getY(i) - (pos.getZ(i) + HALF_D) / PASSO_PONTO) < 1e-4);
+  }
+  assert.ok(esquerda && direita);
+  const texturizada = renderModelPreview(model, {direcao: [10, 2, 3], largura: 700, altura: 500});
+  const mapa = barra.material.map; barra.material.map = null;
+  const lisa = renderModelPreview(model, {direcao: [10, 2, 3], largura: 700, altura: 500});
+  barra.material.map = mapa;
+  assert.ok(contarDiferencas(texturizada, lisa) > 50, 'pontos não aparecem na prévia');
+  descartar(model);
+});
+
 test('roof patch has a scaled weave aligned to the underlying canvas', () => {
   const criar = () => { const b = criarConstrutor(); construirLona(b); return b.montar(); };
   const model = criar(), outro = criar();
   const patch = malhas(model).find((m) => m.material.color.getHexString() === 'd8c79b')!;
   const outroPatch = malhas(outro).find((m) => m.material.color.getHexString() === 'd8c79b')!;
-  const seams = malhas(model).find((m) => m.material.color.getHexString() === '9c895f' && !m.material.map)!;
   assert.ok(patch.material.map instanceof T.DataTexture && patch.material.bumpMap instanceof T.DataTexture);
   assert.equal(patch.material.side, T.DoubleSide);
   assert.ok(patch.material.roughness > .8 && patch.material.bumpScale > 0);
   assert.deepEqual(patch.material.map.image.data, (outroPatch.material.map as T.DataTexture).image.data);
-  assert.ok(!seams.material.map && !seams.material.bumpMap, 'barra lateral permanece para outra etapa');
   const pos = patch.geometry.getAttribute('position'), uv = patch.geometry.getAttribute('uv');
   assert.equal(pos.count, 12, 'geometria do remendo deve continuar com quatro triângulos');
   assert.equal(uv.count, pos.count);

@@ -76,13 +76,13 @@ export function construirLona({superficie}: ConstrutorTenda) {
     };
     superficie('lona', {cor: lonaSombra, duplaFace: true, textura: 'trama'}, segmentos, 4, pontoParede, [lado, .15, 0],
       (u, v) => { const [, y, z] = pontoParede(u, v); return uvParedeLateral(z, y); });
-    // Faixa junto à parede, sem prolongar a barra além das quinas.
-    superficie('lona', {cor: lonaCostura, duplaFace: true}, segmentos, 1, (u, v) => {
+    // Faixa junto à parede, sem prolongar a barra além das quinas; pontos acompanham o comprimento.
+    superficie('lona', {cor: lonaCostura, duplaFace: true, textura: 'costura'}, segmentos, 1, (u, v) => {
       const altura = .05 + v * .07;
       const t = 1 - altura / alturaBeiral(u);
       const x = lado * (HALF_W + Math.sin(Math.PI * u * 5) * .014 * t + FOLGA_DETALHE);
       return [x, altura, (u - .5) * (HALF_D * 2)];
-    }, [lado, 0, 0]);
+    }, [lado, 0, 0], (u, v) => [v, u * 2 * HALF_D / PASSO_PONTO]);
   }
 
   // ---------- Lona: oitão dos fundos ----------
