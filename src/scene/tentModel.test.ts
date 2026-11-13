@@ -293,7 +293,7 @@ test('guy ropes wrap around both the ridge pole and the inclined stakes', () => 
 test('ridge pole keeps its shape and gets axial wood grain and end rings', () => {
   const criarCumeeira = () => {
     const builder = criarConstrutor();
-    construirEstrutura({...builder, viga: () => {}, caixa: () => {}, anel: () => {}, cilindro: (...args) => {
+    construirEstrutura({...builder, vigaReta: () => {}, caixa: () => {}, anel: () => {}, cilindro: (...args) => {
       if (args[2][0] === 0 && args[2][1] === RIDGE) builder.cilindro(...args);
     }});
     return builder.montar();
@@ -346,42 +346,41 @@ test('ridge pole keeps its shape and gets axial wood grain and end rings', () =>
   geometry.dispose(); descartar(a); descartar(b);
 });
 
-test('rafters receive continuous axial wood grain without changing their shapes or posts', () => {
+test('rafters taper continuously with no internal caps and retain axial wood grain', () => {
   const detector = criarConstrutor();
   const construidos: T.Group[] = []; let caibros = 0;
-  construirEstrutura({...detector, cilindro: () => {}, caixa: () => {}, anel: () => {}, viga: (...args) => {
+  construirEstrutura({...detector, cilindro: () => {}, caixa: () => {}, anel: () => {}, vigaReta: (...args) => {
     caibros++;
     assert.equal(args[1].textura, 'madeira-estrutura');
-    const [parte, acabamento, a, b, raio, barriga] = args;
-    const builder = criarConstrutor(), original = criarConstrutor();
-    builder.viga(parte, acabamento, a, b, raio, barriga);
-    const {textura: _textura, ...semTextura} = acabamento;
-    original.viga(parte, semTextura, a, b, raio, barriga);
-    const model = builder.montar(), anterior = original.montar();
+    const [parte, acabamento, a, b, raio] = args;
+    const builder = criarConstrutor();
+    builder.vigaReta(parte, acabamento, a, b, raio);
+    const model = builder.montar();
     construidos.push(model);
     const mesh = malhas(model)[0], geometria = mesh.geometry;
-    assert.deepEqual(Array.from(geometria.getAttribute('position').array), Array.from(malhas(anterior)[0].geometry.getAttribute('position').array));
-    assert.deepEqual(Array.from(geometria.index!.array), Array.from(malhas(anterior)[0].geometry.index!.array));
+    assert.equal(triangulos(mesh), 42, 'não deve haver tampas internas duplicadas');
     assert.ok(mesh.material.map instanceof T.DataTexture && mesh.material.bumpMap instanceof T.DataTexture);
     const inicio = new T.Vector3(...a), fim = new T.Vector3(...b), eixo = fim.clone().sub(inicio).normalize();
     const comprimento = fim.distanceTo(inicio), pos = geometria.getAttribute('position');
     const normal = geometria.getAttribute('normal'), uv = geometria.getAttribute('uv');
-    let meio = 0, tampas = 0, corpo = 0;
+    const aneis = [0, 0, 0]; let tampas = 0;
     for (let i = 0; i < pos.count; i++) {
-      const n = new T.Vector3().fromBufferAttribute(normal, i), p = new T.Vector3().fromBufferAttribute(pos, i);
+      const n = new T.Vector3().fromBufferAttribute(normal, i), p = new T.Vector3().fromBufferAttribute(pos, i).sub(inicio);
+      const distancia = p.dot(eixo), t = distancia / comprimento;
       if (Math.abs(n.dot(eixo)) > .5) {
         tampas++;
+        assert.ok(Math.abs(distancia) < 1e-5 || Math.abs(distancia - comprimento) < 1e-5, 'tampa interna indevida');
         assert.ok(uv.getX(i) >= 416 / 512 - 1e-6 && uv.getX(i) <= 504 / 512 + 1e-6);
       } else {
-        corpo++;
-        const distancia = p.sub(inicio).dot(eixo);
-        assert.ok(Math.abs(uv.getY(i) - distancia / COMPRIMENTO_REFERENCIA_MADEIRA) < 1e-5, 'veio desalinhado na junção');
+        const radial = p.addScaledVector(eixo, -distancia).length();
+        assert.ok(Math.abs(radial - raio * (1 - .15 * t)) < 1e-5, 'raio não afila continuamente');
+        assert.ok(Math.abs(uv.getY(i) - distancia / COMPRIMENTO_REFERENCIA_MADEIRA) < 1e-5, 'veio desalinhado');
         assert.ok(uv.getX(i) >= 8 / 512 - 1e-6 && uv.getX(i) <= 400 / 512 + 1e-6);
-        if (Math.abs(distancia - comprimento / 2) < 1e-5) meio++;
+        const anel = Math.round(t * 2); assert.ok(anel >= 0 && anel <= 2 && Math.abs(t - anel / 2) < 1e-5);
+        aneis[anel]++;
       }
     }
-    assert.ok(meio >= 16 && corpo && tampas, 'junção ou pontas ausentes');
-    descartar(anterior);
+    assert.ok(aneis.every((n) => n >= 8) && tampas, 'anéis ou pontas ausentes');
   }});
   assert.equal(caibros, 4);
   const completo = buildTentModel();
