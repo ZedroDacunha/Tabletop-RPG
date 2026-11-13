@@ -254,6 +254,41 @@ test('roof covers the rafters near both ends', () => {
   descartar(model);
 });
 
+test('rafters stay behind the side canvas at all four corners', () => {
+  // Apenas as paredes e os caibros entram no teste: as sapatas externas são intencionais.
+  const paredes = criarConstrutor();
+  construirLona({...paredes, superficie: (...args) => {
+    if (args[2] === 24 && args[3] === 4) paredes.superficie(...args);
+  }});
+  const caibros = criarConstrutor();
+  construirEstrutura({...caibros, cilindro: () => {}, caixa: () => {}, anel: () => {}});
+  const lona = paredes.montar(), madeira = caibros.montar(), ray = new T.Raycaster();
+  for (const lado of [-1, 1]) for (const extremidade of [-1, 1]) {
+    let verificados = 0;
+    for (let y = .008; y < .62; y += .004) for (let dz = -.045; dz <= .045; dz += .003) {
+      const z = extremidade * (HALF_D - .06) + dz;
+      ray.set(new T.Vector3(lado * 1.5, y, z), new T.Vector3(-lado, 0, 0));
+      const hitLona = ray.intersectObject(lona, true)[0];
+      const hitMadeira = ray.intersectObject(madeira, true)[0];
+      if (!hitMadeira) continue;
+      assert.ok(hitLona, `parede ausente em ${lado}, ${extremidade}, ${y}, ${z}`);
+      assert.ok(hitMadeira.distance >= hitLona.distance + .001,
+        `caibro atravessa ou encosta na lona em ${lado}, ${extremidade}, ${y}, ${z}: ${hitLona.distance - hitMadeira.distance}`);
+      verificados++;
+    }
+    assert.ok(verificados > 20, `caibro não encontrado em ${lado}, ${extremidade}`);
+    // A ponta recuada ainda intercepta o prumo de sete lados próximo ao suporte.
+    const yApoio = extremidade > 0 ? .48 : .02;
+    ray.set(new T.Vector3(lado * 1.4, yApoio, extremidade * (HALF_D - .06)), new T.Vector3(-lado, 0, 0));
+    const apoio = ray.intersectObject(madeira, true)[0];
+    assert.ok(apoio, 'caibro não alcança o prumo');
+    const raioPrumo = .032 + (.028 - .032) * yApoio / EAVE;
+    assert.ok(Math.abs(apoio.point.x - lado * (HALF_W - .03)) < raioPrumo * Math.cos(Math.PI / 7) - .001,
+      'caibro afastado do prumo');
+  }
+  descartar(lona); descartar(madeira);
+});
+
 test('guy ropes wrap around both the ridge pole and the inclined stakes', () => {
   const model = buildTentModel(), ray = new T.Raycaster();
   const cordas = malhas(model).filter((m) => m.name === 'cordas');
