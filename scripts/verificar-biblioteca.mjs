@@ -166,7 +166,7 @@ try {
   // 7) ações do rodapé da biblioteca seguem presentes
   const rodape = await page.evaluate(() => ({
     trechos: Boolean(document.querySelector('[aria-label="Meus trechos"]')),
-    importar: Boolean(document.querySelector('[aria-label="Importar"]')),
+    importar: Boolean(document.querySelector('[aria-label="Importar arquivo"]')),
   }));
   registrar(rodape.trechos && rodape.importar, 'Trechos e Importar continuam no rodapé da biblioteca', JSON.stringify(rodape));
 
