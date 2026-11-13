@@ -95,7 +95,8 @@ try {
     const r = (s) => { const el = document.querySelector(s); const b = el.getBoundingClientRect(); return { top: Math.round(b.top), bottom: Math.round(b.bottom) }; };
     return { tabs: r('.library-tabs'), busca: r('.search-field'), filtros: r('.asset-filters') };
   });
-  await page.evaluate(() => { const s = document.querySelector('.library-scroll'); s.scrollTop = s.scrollHeight; });
+  // rolagem instantânea para medir o cabeçalho fixo (a lista usa scroll-behavior:smooth)
+  await page.evaluate(() => { const s = document.querySelector('.library-scroll'); s.style.scrollBehavior = 'auto'; s.scrollTop = s.scrollHeight; });
   await esperar(500);
   const depois = await page.evaluate(() => {
     const s = document.querySelector('.library-scroll');
@@ -110,14 +111,14 @@ try {
     'rolar o acervo não move abas, busca nem filtros',
     `scrollTop ${depois.rolou ? '>' : '='} 40`,
   );
-  await page.evaluate(() => { const s = document.querySelector('.library-scroll'); s.style.scrollBehavior = 'auto'; s.scrollTop = 0; });
-  await esperar(700);
+  await page.evaluate(() => { document.querySelector('.library-scroll').scrollTop = 0; });
+  await esperar(500);
   const rotulo = await page.evaluate(() => {
     const s = document.querySelector('.library-scroll');
     const rot = s.querySelector('.collection-label');
     if (!rot) return { existe: false };
     const a = s.getBoundingClientRect(), b = rot.getBoundingClientRect();
-    return { existe: true, visivel: b.top >= a.top - 1 && b.bottom <= a.bottom, texto: rot.textContent.replace(/\s+/g, ' ').trim() };
+    return { existe: true, visivel: b.top >= a.top - 1 && b.bottom <= a.bottom, texto: rot.textContent.replace(/\s+/g, ' ').trim(), scrollTop: s.scrollTop };
   });
   registrar(rotulo.existe && rotulo.visivel, 'o rótulo do acervo aparece no topo da lista', JSON.stringify(rotulo));
   await page.screenshot({ path: path.join(capturas, 'biblioteca-acervo.jpg'), type: 'jpeg', quality: 84 });
