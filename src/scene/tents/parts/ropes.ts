@@ -2,23 +2,49 @@ import type {ConstrutorTenda} from '../helpers';
 import {HALF_D, RIDGE, madeiraEscura, corda} from '../types';
 import type {Ponto} from '../types';
 
-/** Tirantes e estacas da tenda. */
-export function construirCordasEEstacas({viga, anel, cilindro, caixa}: ConstrutorTenda) {
-  // ---------- Cordas e estacas ----------
-  const estacas: Ponto[] = [];
-  for (const z of [-1, 1]) {
-    for (const lado of [-1, 1]) {
-      const topo: Ponto = [0, RIDGE, z * (HALF_D + .12)];
-      const pe: Ponto = [lado * 1.62, .045, z * (HALF_D + .78)];
-      viga('cordas', {cor: corda}, topo, pe, .014, .05);
-      anel('cordas', {cor: corda}, topo, .045, .01);
-      estacas.push([lado * 1.62, 0, z * (HALF_D + .78)]);
-    }
-  }
-  for (const [x, y, z] of estacas) {
-    // estaca inclinada para fora, com entalhe
-    cilindro('estacas', {cor: madeiraEscura, fosco: true}, [x, .1, z], .022, .03, .3, [0, 0, -Math.sign(x) * .38], 6);
-    caixa('estacas', {cor: corda}, [x + Math.sign(x) * .02, .2, z], [.05, .03, .05], [0, 0, -Math.sign(x) * .38]);
-  }
+const ANGULO_ESTACA = .38;
+const RAIO_TIRANTE = .011;
+const RAIO_VOLTA = .01;
 
+/** Tirantes amarrados na cumeeira e nas estacas inclinadas. */
+export function construirCordasEEstacas({viga, anel, cilindro}: ConstrutorTenda) {
+  for (const extremidade of [-1, 1]) for (const lado of [-1, 1]) {
+    const zEstaca = extremidade * (HALF_D + .78);
+    const xEstaca = lado * 1.62;
+    const seno = Math.sin(ANGULO_ESTACA), cosseno = Math.cos(ANGULO_ESTACA);
+    // A estaca é inclinada para fora; o eixo das voltas acompanha a inclinação.
+    const eixoEstaca = (distancia: number): Ponto => [
+      xEstaca + lado * seno * distancia, .1 + cosseno * distancia, zEstaca,
+    ];
+    cilindro('estacas', {cor: madeiraEscura, fosco: true}, [xEstaca, .1, zEstaca],
+      .022, .03, .3, [0, 0, -lado * ANGULO_ESTACA], 6);
+
+    // Duas voltas ao redor da madeira, lado a lado. A última toca o tirante.
+    // Em Euler XYZ, a inclinação é no eixo Y antes de deitar o anel.
+    const rotacaoEstaca: Ponto = [Math.PI / 2, -lado * ANGULO_ESTACA, 0];
+    for (const altura of [.068, .088]) {
+      anel('cordas', {cor: corda}, eixoEstaca(altura), .032, RAIO_VOLTA, rotacaoEstaca);
+    }
+    const centroInferior = eixoEstaca(.088);
+    // Lado voltado para a barraca, perpendicular ao eixo da estaca.
+    const pe: Ponto = [centroInferior[0] - lado * cosseno * .032,
+      centroInferior[1] + seno * .032, centroInferior[2]];
+
+    // Os dois tirantes de cada extremidade têm amarrações separadas ao longo
+    // da cumeeira; os anéis ficam perpendiculares ao eixo horizontal da viga.
+    const zTopo = extremidade * (HALF_D + (lado < 0 ? .07 : .115));
+    for (const deslocamento of [-.009, .009]) {
+      anel('cordas', {cor: corda}, [0, RIDGE, zTopo + deslocamento], .059, RAIO_VOLTA, [0, 0, 0]);
+    }
+    const topo: Ponto = [lado * .059, RIDGE, zTopo];
+    viga('cordas', {cor: corda}, topo, pe, RAIO_TIRANTE, .05);
+
+    // Ponta curta sai da volta inferior, dando leitura de nó sem flutuar.
+    const centroPonta = eixoEstaca(.068);
+    const inicioPonta: Ponto = [centroPonta[0] + lado * cosseno * .032,
+      centroPonta[1] - seno * .032, centroPonta[2]];
+    const fimPonta: Ponto = [inicioPonta[0] + lado * .07, inicioPonta[1] - .045,
+      inicioPonta[2] + extremidade * .025];
+    viga('cordas', {cor: corda}, inicioPonta, fimPonta, .009);
+  }
 }

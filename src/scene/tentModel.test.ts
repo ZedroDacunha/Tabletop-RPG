@@ -207,6 +207,42 @@ test('roof covers the rafters near both ends', () => {
   descartar(model);
 });
 
+test('guy ropes wrap around both the ridge pole and the inclined stakes', () => {
+  const model = buildTentModel(), ray = new T.Raycaster();
+  const cordas = malhas(model).filter((m) => m.name === 'cordas');
+  const madeira = malhas(model).filter((m) => m.name === 'estrutura');
+  const estacas = malhas(model).filter((m) => m.name === 'estacas');
+  const verificarVolta = (centro: T.Vector3, radial: T.Vector3, suporte: typeof madeira) => {
+    ray.set(centro.clone().addScaledVector(radial, .15), radial.clone().negate());
+    const corda = ray.intersectObjects(cordas)[0], peca = ray.intersectObjects(suporte)[0];
+    assert.ok(corda && peca && corda.distance < peca.distance, `amarração fora do suporte: ${centro.toArray()}`);
+  };
+  for (const lado of [-1, 1]) for (const ponta of [-1, 1]) {
+    const zTopo = ponta * (HALF_D + (lado < 0 ? .07 : .115));
+    for (const dz of [-.009, .009]) for (const a of [.3, 1.8, 3.4, 4.9]) {
+      verificarVolta(new T.Vector3(0, RIDGE, zTopo + dz + .001), new T.Vector3(Math.cos(a), Math.sin(a), 0), madeira);
+    }
+    const seno = Math.sin(.38), cosseno = Math.cos(.38);
+    const eixo = new T.Vector3(lado * seno, cosseno, 0);
+    const lateral = new T.Vector3(cosseno, -lado * seno, 0);
+    const base = new T.Vector3(lado * 1.62, .1, ponta * (HALF_D + .78));
+    for (const altura of [.068, .088]) for (const a of [.3, 1.8, 3.4, 4.9]) {
+      const radial = lateral.clone().multiplyScalar(Math.cos(a)).add(new T.Vector3(0, 0, Math.sin(a)));
+      verificarVolta(base.clone().addScaledVector(eixo, altura), radial, estacas);
+    }
+    // Confere a presença do trecho principal próximo de cada amarração.
+    const topo = new T.Vector3(lado * .059, RIDGE, zTopo);
+    const pe = base.clone().addScaledVector(eixo, .088).add(new T.Vector3(-lado * cosseno * .032, seno * .032, 0));
+    for (const t of [.04, .96]) {
+      const ponto = topo.clone().lerp(pe, t); ponto.y -= .1 * Math.min(t, 1 - t);
+      ray.set(ponto.clone().add(new T.Vector3(0, 0, .08)), new T.Vector3(0, 0, -1));
+      const hit = ray.intersectObjects(cordas)[0];
+      assert.ok(hit && hit.distance < .095, `tirante interrompido em ${lado}, ${ponta}, ${t}`);
+    }
+  }
+  descartar(model);
+});
+
 test('rope alone receives deterministic seamless color and bump textures', () => {
   const a = buildTentModel(), b = buildTentModel(), clone = a.clone(true);
   const rope = malhas(a).find((m) => m.name === 'cordas')!;
