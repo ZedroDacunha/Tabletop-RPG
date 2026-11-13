@@ -2,6 +2,7 @@ import type {ConstrutorTenda} from '../helpers';
 import {HALF_W, HALF_D, RIDGE, EAVE, lonaClara, lonaSombra, lonaCostura, lonaRemendo} from '../types';
 import type {Acabamento, Ponto} from '../types';
 import {uvTelhado, uvParedeLateral, uvParedeExtremidade} from '../canvasTexture';
+import {PASSO_PONTO} from '../seamTexture';
 
 const FAIXAS = 4, SEGMENTOS_COMPRIMENTO = 6, SEGMENTOS_AGUA = 6;
 const FOLGA_DETALHE = .006;
@@ -46,13 +47,15 @@ export function construirLona({superficie}: ConstrutorTenda) {
 
       if (faixa > 0) {
         // Duas metades permitem acompanhar a triangulação de cada faixa vizinha.
-        for (const sentido of [-1, 1]) superficie('lona', {cor: lonaCostura, duplaFace: true}, 1, SEGMENTOS_AGUA,
-          (u, v) => detalheAgua(lado, faixa / FAIXAS + sentido * u * .004, v), [lado, .9, 0]);
+        for (const sentido of [-1, 1]) superficie('lona', {cor: lonaCostura, duplaFace: true, textura: 'costura'}, 1, SEGMENTOS_AGUA,
+          (u, v) => detalheAgua(lado, faixa / FAIXAS + sentido * u * .004, v), [lado, .9, 0],
+          (u, v) => [.5 + sentido * u * .5, v * Math.hypot(HALF_W, RIDGE - EAVE) / PASSO_PONTO]);
       }
     }
     // A costura da cumeeira acompanha cada água em vez de formar uma placa plana.
-    superficie('lona', {cor: lonaCostura, duplaFace: true}, FAIXAS * SEGMENTOS_COMPRIMENTO, 1,
-      (u, v) => detalheAgua(lado, u, v * .025), [lado, 1, 0]);
+    superficie('lona', {cor: lonaCostura, duplaFace: true, textura: 'costura'}, FAIXAS * SEGMENTOS_COMPRIMENTO, 1,
+      (u, v) => detalheAgua(lado, u, v * .025), [lado, 1, 0],
+      (u, v) => [v, u * 2 * HALF_D / PASSO_PONTO]);
 
     // Remendo na água: os limites coincidem com a grade da lona, evitando
     // cruzar triângulos que possuem inclinações diferentes.
