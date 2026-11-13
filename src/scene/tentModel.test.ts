@@ -8,7 +8,8 @@ import {amostrarAgua, construirLona} from './tents/parts/canvas';
 import {construirEntrada} from './tents/parts/entrance';
 import {construirEstaca} from './tents/parts/stakes';
 import {PASSO_CORDA} from './tents/ropeTexture';
-import {TAMANHO_TRAMA} from './tents/canvasTexture';
+import {TAMANHO_TRAMA, alturaTrama, uvTelhado} from './tents/canvasTexture';
+import {INICIO_REMENDO, FIM_REMENDO, TOPO_REMENDO, BASE_REMENDO} from './tents/patchTexture';
 import {PASSO_PONTO} from './tents/seamTexture';
 import previews from '../features/assets/modelPreviews.json';
 import {direcaoDeAngulos, renderModelPreview} from '../../scripts/preview-raster';
@@ -419,7 +420,7 @@ test('ground hems have paired stitches following both walls', () => {
   descartar(model);
 });
 
-test('roof patch has a scaled weave aligned to the underlying canvas', () => {
+test('roof patch has aligned weave and stitches within its perimeter', () => {
   const criar = () => { const b = criarConstrutor(); construirLona(b); return b.montar(); };
   const model = criar(), outro = criar();
   const patch = malhas(model).find((m) => m.material.color.getHexString() === 'd8c79b')!;
@@ -428,14 +429,38 @@ test('roof patch has a scaled weave aligned to the underlying canvas', () => {
   assert.equal(patch.material.side, T.DoubleSide);
   assert.ok(patch.material.roughness > .8 && patch.material.bumpScale > 0);
   assert.deepEqual(patch.material.map.image.data, (outroPatch.material.map as T.DataTexture).image.data);
+  const map = patch.material.map, bump = patch.material.bumpMap;
+  assert.equal(map.wrapS, T.ClampToEdgeWrapping); assert.equal(map.wrapT, T.ClampToEdgeWrapping);
+  assert.equal(map.colorSpace, T.SRGBColorSpace); assert.equal(bump.colorSpace, T.NoColorSpace);
+  assert.ok(map.generateMipmaps && bump.generateMipmaps);
+  const data = map.image.data as Uint8Array, altura = bump.image.data as Uint8Array;
+  const lados = [0, 0, 0, 0]; let interior = 0;
+  for (let y = 0; y < 256; y++) for (let x = 0; x < 256; x++) {
+    const u = (x + .5) / 256, v = (y + .5) / 256;
+    const [ut, vt] = uvTelhado(INICIO_REMENDO + u * (FIM_REMENDO - INICIO_REMENDO), TOPO_REMENDO + v * (BASE_REMENDO - TOPO_REMENDO));
+    const tecido = alturaTrama(ut, vt), esperado = Math.round(225 + 30 * tecido);
+    const i = (y * 256 + x) * 4, escurecimento = esperado - data[i];
+    if (u > .08 && u < .92 && v > .08 && v < .92) {
+      assert.equal(escurecimento, 0, 'costura invadiu o centro do remendo');
+      assert.equal(altura[i], Math.round(tecido * 255), 'trama perdeu a fase ou a escala');
+      interior++;
+    }
+    if (escurecimento > 15) {
+      assert.ok(altura[i] >= Math.round(tecido * 255), 'ponto sem relevo');
+      if (u < .06) lados[0]++;
+      if (u > .94) lados[1]++;
+      if (v < .06) lados[2]++;
+      if (v > .94) lados[3]++;
+    }
+  }
+  assert.ok(interior > 0 && lados.every((n) => n > 10), `pontos ausentes em alguma borda: ${lados}`);
   const pos = patch.geometry.getAttribute('position'), uv = patch.geometry.getAttribute('uv');
   assert.equal(pos.count, 12, 'geometria do remendo deve continuar com quatro triângulos');
   assert.equal(uv.count, pos.count);
   for (let i = 0; i < pos.count; i++) {
-    const along = uv.getX(i) * TAMANHO_TRAMA / (2 * HALF_D);
-    const across = uv.getY(i) * TAMANHO_TRAMA / Math.hypot(HALF_W, RIDGE - EAVE);
-    assert.ok(along >= 19 / 24 - 1e-5 && along <= 21 / 24 + 1e-5);
-    assert.ok(across >= .5 - 1e-5 && across <= 2 / 3 + 1e-5);
+    const along = INICIO_REMENDO + uv.getX(i) * (FIM_REMENDO - INICIO_REMENDO);
+    const across = TOPO_REMENDO + uv.getY(i) * (BASE_REMENDO - TOPO_REMENDO);
+    assert.ok(uv.getX(i) >= 0 && uv.getX(i) <= 1 && uv.getY(i) >= 0 && uv.getY(i) <= 1);
     const [x, y, z] = amostrarAgua(-1, along, across);
     const expected = new T.Vector3(x - .006 * .786, y + .006 * .618, z);
     assert.ok(expected.distanceTo(new T.Vector3().fromBufferAttribute(pos, i)) < 1e-5, 'UV ou geometria do remendo deslocado');
@@ -572,6 +597,24 @@ test('both entrance flaps receive a correctly scaled canvas weave', () => {
   material.map = mapa;
   assert.ok(contarDiferencas(comTextura, semTextura) > 500, 'trama não aparece na prévia');
   descartar(model); descartar(outro);
+});
+
+test('offline preview clamps texture coordinates at the border', () => {
+  const geometry = new T.PlaneGeometry(1, 1), uv = geometry.getAttribute('uv');
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, 1.25, .25);
+  const map = new T.DataTexture(new Uint8Array([
+    40, 40, 40, 255, 250, 250, 250, 255,
+    40, 40, 40, 255, 250, 250, 250, 255,
+  ]), 2, 2, T.RGBAFormat);
+  map.colorSpace = T.SRGBColorSpace; map.wrapS = T.ClampToEdgeWrapping; map.wrapT = T.ClampToEdgeWrapping;
+  const mesh = new T.Mesh(geometry, new T.MeshStandardMaterial({color: 0xffffff, map}));
+  const model = new T.Group(); model.add(mesh);
+  const options = {direcao: [0, 0, 10] as [number, number, number], largura: 100, altura: 100, sombra: false};
+  const limitada = renderModelPreview(model, options);
+  map.wrapS = T.RepeatWrapping;
+  const repetida = renderModelPreview(model, options);
+  assert.ok(contarDiferencas(limitada, repetida) > 1000, 'prévia ignora clamp na borda');
+  descartar(model);
 });
 
 test('flipped canvas triangles keep their UV coordinates attached to the vertices', () => {
