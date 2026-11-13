@@ -55,6 +55,24 @@ test('tent is assembled from the five declared parts inside the draw-call and tr
   descartar(model);
 });
 
+test('entrance has a clear passage and canvas above and beside it', () => {
+  const model = buildTentModel(), ray = new T.Raycaster();
+  const naFrente = (x: number, y: number) => {
+    ray.set(new T.Vector3(x, y, HALF_D + .18), new T.Vector3(0, 0, -1));
+    // A passagem termina antes da armação; o interior e o fundo não contam como porta.
+    return ray.intersectObject(model, true).filter((hit) => hit.distance < .32);
+  };
+  for (const x of [-.35, -.2, 0, .2, .35]) {
+    for (const y of [.2, .6, 1, 1.4]) {
+      assert.equal(naFrente(x, y).length, 0, `passagem obstruída em ${x}, ${y}`);
+    }
+  }
+  for (const [x, y] of [[0, 1.52], [0, 1.8], [-.4, 1.52], [.4, 1.52], [-.8, .4], [.8, .4]]) {
+    assert.equal(naFrente(x, y)[0]?.object.name, 'lona', `frente aberta fora da porta em ${x}, ${y}`);
+  }
+  descartar(model);
+});
+
 test('interior props stay inside the canvas so nothing pokes through the roof', () => {
   const model = buildTentModel();
   for (const m of malhas(model)) {
@@ -126,6 +144,7 @@ test('tent builds deterministically and ships a preview thumbnail', () => {
   for (let i = 0; i < malhas(a).length; i++) assert.deepEqual(Array.from(malhas(a)[i].geometry.getAttribute('position').array), Array.from(malhas(b)[i].geometry.getAttribute('position').array));
   assert.match(String(previews.tent), /^data:image\/png;base64,/);
   assert.ok(String(previews.tent).length > 4000, 'miniatura da tenda vazia');
+  assert.equal(previews.tent, 'data:image/png;base64,' + renderModelPreview(a).toString('base64'), 'miniatura desatualizada');
   descartar(a); descartar(b);
 });
 
