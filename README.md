@@ -9,7 +9,7 @@ O histórico do projeto está registrado como notas de [Obsidian](https://obsidi
 - `Bugs e soluções/` — um arquivo por bug (`BUG-XXX - título curto.md`), com causa raiz, correção antes/depois e como validar. Comece pelo índice: `Bugs e soluções/_Índice.md`.
 - `Melhorias e Atualizações/` — um arquivo por entrega (`MEL-XXX - título curto.md`), com motivação, como era antes, decisões descartadas e impacto. Comece pelo índice: `Melhorias e Atualizações/_Índice.md`.
 
-Hoje o cofre tem **31 notas de melhoria** e **5 de bug**. Os modelos para novas notas ficam em `Bugs e soluções/Bugs e soluçoes.md` e `Melhorias e Atualizações/Melhorias e Atualizações.md`. As notas usam frontmatter com tags (sem `#`) e `[[wikilinks]]` entre si.
+Hoje o cofre tem **32 notas de melhoria** e **5 de bug**. Os modelos para novas notas ficam em `Bugs e soluções/Bugs e soluçoes.md` e `Melhorias e Atualizações/Melhorias e Atualizações.md`. As notas usam frontmatter com tags (sem `#`) e `[[wikilinks]]` entre si.
 
 ## Executar
 
