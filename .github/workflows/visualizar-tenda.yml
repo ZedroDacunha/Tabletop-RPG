@@ -1,0 +1,36 @@
+name: Visualizar tenda
+
+on:
+  push:
+    branches: [arena/**]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  visualizar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm i --no-save puppeteer-core
+      - name: Subir o Vite
+        run: |
+          nohup npx vite --port 5199 --host 127.0.0.1 > /tmp/vite.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://127.0.0.1:5199/tenda.html > /dev/null && break; sleep 1; done
+          cat /tmp/vite.log
+      - run: mkdir -p capturas && node scripts/tmp-capturar-tenda.mjs
+      - if: always()
+        run: |
+          rm -rf /tmp/pub && mkdir -p /tmp/pub
+          cp -r capturas/. /tmp/pub/
+          cd /tmp/pub
+          git init -q && git checkout -q -b capturas-ci
+          git add -A
+          git -c user.name=capturas -c user.email=capturas@users.noreply.github.com commit -qm "capturas: tenda"
+          git push -q --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" capturas-ci

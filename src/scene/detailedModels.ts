@@ -1,6 +1,7 @@
 import * as T from 'three';
 import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {buildTreeModel} from './treeModels';
+import {buildTentModel} from './tentModel';
 import type {DetailedKind} from '../features/assets/detailedKinds';
 
 type V=[number,number,number];
@@ -8,6 +9,7 @@ const wood='#866044',lightWood='#b18b5d',darkWood='#513c2e',iron='#394348',brass
 /** Hand-built geometry. Detail is baked and merged by material before rendering. */
 export function buildDetailedModel(kind:DetailedKind):T.Group {
  if(kind==='willow')return buildTreeModel('willow');
+ if(kind==='tent')return buildTentModel();
  const root=new T.Group();const materials=new Map<string,T.MeshStandardMaterial>();
  const mat=(color:string,metal=0,emissive=false)=>{const key=`${color}/${metal}/${emissive}`;if(!materials.has(key))materials.set(key,new T.MeshStandardMaterial({color,roughness:metal?.4:.88,metalness:metal,flatShading:true,...(emissive?{emissive:color,emissiveIntensity:1.6}:{}),side:T.DoubleSide}));return materials.get(key)!};
  const mesh=(g:T.BufferGeometry,p:V,c:string,r:V=[0,0,0],s:V=[1,1,1],metal=0,emissive=false)=>{const m=new T.Mesh(g,mat(c,metal,emissive));m.position.set(...p);m.rotation.set(...r);m.scale.set(...s);root.add(m);return m};
