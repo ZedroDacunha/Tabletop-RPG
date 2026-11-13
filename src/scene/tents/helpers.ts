@@ -6,7 +6,7 @@ import {criarTexturasMadeiraEstaca} from './woodTexture';
 import {criarTexturasLona} from './canvasTexture';
 import {criarTexturasCostura} from './seamTexture';
 import {criarTexturasRemendo} from './patchTexture';
-import {ajustarUvCumeeira, criarTexturasCumeeira} from './ridgeTexture';
+import {ajustarUvMadeira, criarTexturasMadeiraEstrutural} from './structureWoodTexture';
 
 /** Agrupa as geometrias por parte e acabamento para limitar as draw calls. */
 export function criarConstrutor() {
@@ -69,7 +69,7 @@ export function criarConstrutor() {
 
   const cilindro = (parte: Parte, acabamento: Acabamento, p: Ponto, topo: number, base: number, altura: number, r: Ponto = [0, 0, 0], lados = 10) => {
     const g = new T.CylinderGeometry(topo, base, altura, lados, 1, false);
-    if (acabamento.textura === 'madeira-cumeeira') ajustarUvCumeeira(g);
+    if (acabamento.textura === 'madeira-estrutura') ajustarUvMadeira(g, 0, altura);
     const m = new T.Matrix4().compose(new T.Vector3(...p), new T.Quaternion().setFromEuler(new T.Euler(...r)), new T.Vector3(1, 1, 1));
     guardar(parte, acabamento, g.applyMatrix4(m));
   };
@@ -99,11 +99,12 @@ export function criarConstrutor() {
         const uv = g.getAttribute('uv');
         for (let i = 0; i < uv.count; i++) uv.setY(i, inicioUV + uv.getY(i) * comprimento / PASSO_CORDA);
       }
+      if (acabamento.textura === 'madeira-estrutura') ajustarUvMadeira(g, inicioUV, comprimento);
       const m = new T.Matrix4().compose(pa.clone().add(pb).multiplyScalar(.5), new T.Quaternion().setFromUnitVectors(new T.Vector3(0, 1, 0), pb.clone().sub(pa).normalize()), new T.Vector3(1, 1, 1));
       guardar(parte, acabamento, g.applyMatrix4(m));
     };
     trecho(inicio, meio, raio, 0);
-    trecho(meio, fim, raio, inicio.distanceTo(meio) / PASSO_CORDA);
+    trecho(meio, fim, raio, inicio.distanceTo(meio) / (parte === 'cordas' ? PASSO_CORDA : 1));
   };
 
   const montar = (): T.Group => {
@@ -126,7 +127,7 @@ export function criarConstrutor() {
         ...(acabamento.textura === 'trama' ? {...criarTexturasLona(), bumpScale: .0007} : {}),
         ...(acabamento.textura === 'costura' ? {...criarTexturasCostura(), bumpScale: .0005} : {}),
         ...(acabamento.textura === 'remendo' ? {...criarTexturasRemendo(), bumpScale: .0007} : {}),
-        ...(acabamento.textura === 'madeira-cumeeira' ? {...criarTexturasCumeeira(), bumpScale: .001} : {}),
+        ...(acabamento.textura === 'madeira-estrutura' ? {...criarTexturasMadeiraEstrutural(), bumpScale: .001} : {}),
       });
       const malha = new T.Mesh(fundida, material);
       malha.name = chave.split('|')[0];

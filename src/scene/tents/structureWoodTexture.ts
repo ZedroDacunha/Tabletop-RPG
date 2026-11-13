@@ -1,24 +1,26 @@
 import * as T from 'three';
+import {HALF_D} from './types';
 
 // O atlas separa a madeira longitudinal da seção cortada das duas pontas.
+export const COMPRIMENTO_REFERENCIA_MADEIRA = 2 * HALF_D + .34;
 const LARGURA = 512, ALTURA = 256;
 const INICIO_CORPO = 8, LARGURA_CORPO = 392, INICIO_PONTA = 416, LARGURA_PONTA = 88;
 
 /** Mantém os veios no eixo e desenha anéis de crescimento nas duas tampas. */
-export function ajustarUvCumeeira(geometria: T.BufferGeometry) {
+export function ajustarUvMadeira(geometria: T.BufferGeometry, inicio: number, comprimento: number) {
   const uv = geometria.getAttribute('uv'), normal = geometria.getAttribute('normal');
   for (let i = 0; i < uv.count; i++) {
     const u = uv.getX(i), v = uv.getY(i);
     if (Math.abs(normal.getY(i)) > .5) {
       uv.setXY(i, (INICIO_PONTA + u * LARGURA_PONTA) / LARGURA, (.5 + v * (ALTURA - 1)) / ALTURA);
     } else {
-      uv.setXY(i, (INICIO_CORPO + u * LARGURA_CORPO) / LARGURA, v);
+      uv.setXY(i, (INICIO_CORPO + u * LARGURA_CORPO) / LARGURA, (inicio + v * comprimento) / COMPRIMENTO_REFERENCIA_MADEIRA);
     }
   }
 }
 
 /** Madeira fosca procedural em tons neutros: o material mantém a cor da viga. */
-export function criarTexturasCumeeira() {
+export function criarTexturasMadeiraEstrutural() {
   const cor = new Uint8Array(LARGURA * ALTURA * 4), relevo = new Uint8Array(LARGURA * ALTURA * 4);
   const tau = 2 * Math.PI;
   for (let y = 0; y < ALTURA; y++) for (let x = 0; x < LARGURA; x++) {
