@@ -6,6 +6,7 @@ import {criarTexturasMadeiraEstaca} from './woodTexture';
 import {criarTexturasLona} from './canvasTexture';
 import {criarTexturasCostura} from './seamTexture';
 import {criarTexturasRemendo} from './patchTexture';
+import {ajustarUvCumeeira, criarTexturasCumeeira} from './ridgeTexture';
 
 /** Agrupa as geometrias por parte e acabamento para limitar as draw calls. */
 export function criarConstrutor() {
@@ -68,6 +69,7 @@ export function criarConstrutor() {
 
   const cilindro = (parte: Parte, acabamento: Acabamento, p: Ponto, topo: number, base: number, altura: number, r: Ponto = [0, 0, 0], lados = 10) => {
     const g = new T.CylinderGeometry(topo, base, altura, lados, 1, false);
+    if (acabamento.textura === 'madeira-cumeeira') ajustarUvCumeeira(g);
     const m = new T.Matrix4().compose(new T.Vector3(...p), new T.Quaternion().setFromEuler(new T.Euler(...r)), new T.Vector3(1, 1, 1));
     guardar(parte, acabamento, g.applyMatrix4(m));
   };
@@ -124,6 +126,7 @@ export function criarConstrutor() {
         ...(acabamento.textura === 'trama' ? {...criarTexturasLona(), bumpScale: .0007} : {}),
         ...(acabamento.textura === 'costura' ? {...criarTexturasCostura(), bumpScale: .0005} : {}),
         ...(acabamento.textura === 'remendo' ? {...criarTexturasRemendo(), bumpScale: .0007} : {}),
+        ...(acabamento.textura === 'madeira-cumeeira' ? {...criarTexturasCumeeira(), bumpScale: .001} : {}),
       });
       const malha = new T.Mesh(fundida, material);
       malha.name = chave.split('|')[0];
