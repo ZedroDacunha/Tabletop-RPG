@@ -33,7 +33,9 @@ export function construirEntrada({superficie, viga}: ConstrutorTenda) {
       const z = frente + .004 + .008 * Math.sin(Math.PI * u) * Math.sin(Math.PI * v);
       return [x, y, z];
     };
-    superficie('lona', {cor: lonaClara, duplaFace: true}, 4, 8, pontoAba, [0, 0, 1]);
+    // A trama segue as coordenadas da frente, sem esticar com a largura variável.
+    superficie('lona', {cor: lonaClara, duplaFace: true, textura: 'trama'}, 4, 8, pontoAba, [0, 0, 1],
+      (u, v) => { const [x, y] = pontoAba(u, v); return uvParedeExtremidade(x, y); });
 
     // A amarração segue as dobras da superfície em vez de formar um anel
     // circular que ficava suspenso atrás e à frente de uma aba plana.
