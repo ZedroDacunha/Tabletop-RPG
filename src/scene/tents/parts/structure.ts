@@ -4,7 +4,7 @@ import {HALF_W, HALF_D, RIDGE, EAVE, madeira, madeiraEscura} from '../types';
 /** Armação; na frente os caibros terminam no beiral, sem cruzar a porta. */
 export function construirEstrutura({cilindro, viga, caixa, anel}: ConstrutorTenda) {
   // ---------- Estrutura de madeira ----------
-  cilindro('estrutura', {cor: madeira, fosco: true}, [0, RIDGE, 0], .048, .055, HALF_D * 2 + .34, [Math.PI / 2, 0, 0], 9);
+  cilindro('estrutura', {cor: madeira, fosco: true, textura: 'madeira-cumeeira'}, [0, RIDGE, 0], .048, .055, HALF_D * 2 + .34, [Math.PI / 2, 0, 0], 9);
   for (const z of [-HALF_D + .06, HALF_D - .06]) {
     for (const lado of [-1, 1]) {
       // Os caibros ficam por dentro da lona: o raio da madeira não atravessa a água.

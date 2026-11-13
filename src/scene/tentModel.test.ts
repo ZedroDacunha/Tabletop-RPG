@@ -288,6 +288,56 @@ test('guy ropes wrap around both the ridge pole and the inclined stakes', () => 
   descartar(model);
 });
 
+test('ridge pole keeps its shape and gets axial wood grain and end rings only', () => {
+  const a = buildTentModel(), b = buildTentModel();
+  const estrutura = malhas(a).filter((m) => m.name === 'estrutura');
+  const texturizadas = estrutura.filter((m) => m.material.map instanceof T.DataTexture);
+  assert.equal(texturizadas.length, 1, 'apenas a cumeeira deve receber textura');
+  assert.ok(estrutura.filter((m) => m !== texturizadas[0]).every((m) => !m.material.map && !m.material.bumpMap));
+  const pole = texturizadas[0], map = pole.material.map as T.DataTexture, bump = pole.material.bumpMap;
+  const outro = malhas(b).find((m) => m.name === 'estrutura' && m.material.map instanceof T.DataTexture)!;
+  assert.ok(bump instanceof T.DataTexture);
+  assert.equal(map.colorSpace, T.SRGBColorSpace); assert.equal(bump.colorSpace, T.NoColorSpace);
+  assert.ok(map.generateMipmaps && pole.material.roughness > .8 && pole.material.bumpScale > 0);
+  assert.deepEqual(map.image.data, (outro.material.map as T.DataTexture).image.data);
+  assert.deepEqual(bump.image.data, (outro.material.bumpMap as T.DataTexture).image.data);
+  assert.equal(malhas(a.clone(true)).find((m) => m.material.map === map)?.material, pole.material);
+  const geometry = new T.CylinderGeometry(.048, .055, HALF_D * 2 + .34, 9, 1, false);
+  geometry.applyMatrix4(new T.Matrix4().compose(new T.Vector3(0, RIDGE, 0),
+    new T.Quaternion().setFromEuler(new T.Euler(Math.PI / 2, 0, 0)), new T.Vector3(1, 1, 1)));
+  const pos = pole.geometry.getAttribute('position'), uv = pole.geometry.getAttribute('uv');
+  assert.deepEqual(Array.from(pos.array), Array.from(geometry.getAttribute('position').array), 'a cumeeira mudou de forma');
+  assert.deepEqual(Array.from(pole.geometry.index!.array), Array.from(geometry.index!.array));
+  assert.equal(pos.count, uv.count);
+  const normal = pole.geometry.getAttribute('normal'); let corpo = 0, pontas = 0;
+  for (let i = 0; i < uv.count; i++) {
+    if (Math.abs(normal.getZ(i)) > .5) {
+      pontas++;
+      assert.ok(uv.getX(i) >= 416 / 512 - 1e-6 && uv.getX(i) <= 504 / 512 + 1e-6);
+      assert.ok(uv.getY(i) > 0 && uv.getY(i) < 1);
+    } else {
+      corpo++;
+      assert.ok(uv.getX(i) >= 8 / 512 - 1e-6 && uv.getX(i) <= 400 / 512 + 1e-6);
+      assert.ok(Math.abs(uv.getY(i) - (pos.getZ(i) / (2 * HALF_D + .34) + .5)) < 1e-5, 'veio não acompanha o eixo');
+    }
+  }
+  assert.ok(corpo > 0 && pontas > 0);
+  const dados = map.image.data as Uint8Array;
+  for (const y of [0, 50, 120, 220]) for (let x = 0; x < 8; x++) {
+    for (let c = 0; c < 4; c++) {
+      assert.equal(dados[(y * 512 + x) * 4 + c], dados[(y * 512 + x + 392) * 4 + c], 'emenda circular descontínua');
+      assert.equal(dados[(y * 512 + 8 + x) * 4 + c], dados[(y * 512 + 400 + x) * 4 + c]);
+    }
+  }
+  const detalhe = new T.Group(); detalhe.add(pole.clone());
+  const texturizada = renderModelPreview(detalhe, {direcao: [3, 5, 8], largura: 700, altura: 500});
+  pole.material.map = null;
+  const lisa = renderModelPreview(detalhe, {direcao: [3, 5, 8], largura: 700, altura: 500});
+  pole.material.map = map;
+  assert.ok(contarDiferencas(texturizada, lisa) > 100, 'madeira não aparece na prévia');
+  geometry.dispose(); descartar(a); descartar(b);
+});
+
 test('roof canvas weave is seamless and deterministic', () => {
   const construirTelhado = () => {
     const builder = criarConstrutor();
@@ -704,7 +754,7 @@ test('rope receives deterministic seamless color and bump textures', () => {
   for (const n of uv.array) assert.ok(Number.isFinite(n));
   assert.ok(Math.max(...Array.from(uv.array)) > 2, 'textura não se repete ao longo da corda');
   assert.equal(malhas(clone).find((m) => m.name === 'cordas')!.material, rope.material);
-  for (const m of malhas(a).filter((m) => m.name !== 'cordas' && m.name !== 'estacas' && m.name !== 'lona')) assert.equal(m.material.map, null);
+  for (const m of malhas(a).filter((m) => m.name !== 'cordas' && m.name !== 'estacas' && m.name !== 'lona' && m.name !== 'estrutura')) assert.equal(m.material.map, null);
   descartar(a); descartar(b);
 });
 
