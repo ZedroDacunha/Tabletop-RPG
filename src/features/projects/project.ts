@@ -4,7 +4,7 @@ export const KINDS = [
  ...DETAILED_KINDS,
  'pine','oak','birch','deadtree','bush','mushrooms','log','crystal','pond',
  'rock','wall','arch','floor','tower','stairs','fence','bridge','shrine',
- 'tent','campfire','lantern','banner','statue','chest','cart','crate','barrel','well','column',
+ 'campfire','lantern','banner','statue','chest','cart','crate','barrel','well','column',
  'cube','sphere','cylinder',
 ] as const;
 export type Kind = typeof KINDS[number];

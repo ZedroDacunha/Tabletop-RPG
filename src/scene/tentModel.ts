@@ -38,8 +38,12 @@ export function buildTentModel(): T.Group {
     pecas.get(chave)!.geometrias.push(geometria);
   };
 
-  /** Superfície de lona: grade paramétrica, com normais calculadas a partir das dobras. */
-  const superficie = (parte: Parte, acabamento: Acabamento, uN: number, vN: number, fn: (u: number, v: number) => Ponto) => {
+  /**
+   * Superfície de lona: grade paramétrica, com normais calculadas a partir das dobras.
+   * `paraFora` aponta para o lado de fora da peça; se a malha nascer virada, a ordem dos
+   * triângulos é invertida — assim a lona é iluminada por fora em todas as faces.
+   */
+  const superficie = (parte: Parte, acabamento: Acabamento, uN: number, vN: number, fn: (u: number, v: number) => Ponto, paraFora: Ponto = [0, 1, 0]) => {
     const posicoes: number[] = [];
     const ponto = (u: number, v: number) => new T.Vector3(...fn(u, v));
     for (let i = 0; i < uN; i++) for (let j = 0; j < vN; j++) {
@@ -49,6 +53,19 @@ export function buildTentModel(): T.Group {
     const g = new T.BufferGeometry();
     g.setAttribute('position', new T.Float32BufferAttribute(posicoes, 3));
     g.computeVertexNormals();
+    const normais = g.getAttribute('normal');
+    const soma = [0, 0, 0];
+    for (let i = 0; i < normais.count; i++) { soma[0] += normais.getX(i); soma[1] += normais.getY(i); soma[2] += normais.getZ(i); }
+    if (soma[0] * paraFora[0] + soma[1] * paraFora[1] + soma[2] * paraFora[2] < 0) {
+      const pos = g.getAttribute('position') as T.BufferAttribute;
+      for (let i = 0; i < pos.count; i += 3) {
+        const bx = pos.getX(i + 1), by = pos.getY(i + 1), bz = pos.getZ(i + 1);
+        pos.setXYZ(i + 1, pos.getX(i + 2), pos.getY(i + 2), pos.getZ(i + 2));
+        pos.setXYZ(i + 2, bx, by, bz);
+      }
+      pos.needsUpdate = true;
+      g.computeVertexNormals();
+    }
     guardar(parte, acabamento, g);
   };
 
@@ -92,22 +109,28 @@ export function buildTentModel(): T.Group {
       const acabamento: Acabamento = {cor: faixa % 2 ? lonaClara : lonaSombra, duplaFace: true};
       superficie('lona', acabamento, 6, 6, (u, v) => {
         const aoLongo = (faixa + u) / faixas;
-        const z = (aoLongo - .5) * HALF_D * 2;
-        let x = lado * v * HALF_W;
-        let y = RIDGE + v * (EAVE - RIDGE);
+        // a lona sobra 3 cm em cada ponta: cobre o encontro com os oitões
+        const z = (aoLongo - .5) * (HALF_D * 2 + .06);
+        // o beiral passa 8 cm por fora da parede e termina abaixo do topo dela:
+        // assim a lona cobre o encontro em vez de encostar de topo (fresta de 1 px).
+        let x = lado * v * (HALF_W + .08);
+        let y = RIDGE + v * (EAVE - .12 - RIDGE);
         // a lona cede entre os apoios e ganha dobras verticais
         y -= Math.sin(Math.PI * aoLongo) * .05 * (1 - v * .4);
         y += Math.sin(Math.PI * 2 * u) * .007 * (1 - v);
-        x += lado * Math.sin(Math.PI * u * 2 + faixa * 1.7) * .011 * v;
+        // ondulação contínua ao longo do comprimento, nula no beiral: se ela
+        // depender da faixa, as emendas entre panos ficam desencontradas, e se
+        // chegar até a borda, o beiral ondulado deixa passar raio rasante de 1 px.
+        x += lado * Math.sin(aoLongo * Math.PI * 8) * .011 * Math.sin(Math.PI * v);
         return [x, y, z];
-      });
+      }, [lado, .9, 0]);
       // costura entre as faixas
       if (faixa > 0) {
         const limite = faixa / faixas;
         superficie('lona', {cor: lonaCostura, duplaFace: true}, 1, 6, (u, v) => {
           const aoLongo = limite + (u - .5) * .012;
-          return [lado * (v * HALF_W + .012), RIDGE + v * (EAVE - RIDGE) + .012, (aoLongo - .5) * HALF_D * 2];
-        });
+          return [lado * (v * (HALF_W + .08) + .012), RIDGE + v * (EAVE - .12 - RIDGE) + .012, (aoLongo - .5) * (HALF_D * 2 + .06)];
+        }, [lado, .9, 0]);
       }
     }
   }
@@ -116,58 +139,56 @@ export function buildTentModel(): T.Group {
   superficie('lona', {cor: lonaCostura, duplaFace: true}, 8, 1, (u, v) => {
     const z = (u - .5) * HALF_D * 2;
     return [(v - .5) * .07, RIDGE + .012 - Math.sin(Math.PI * u) * .05, z];
-  });
+  }, [0, 1, 0]);
 
   // ---------- Lona: paredes laterais, com saia no chão ----------
   for (const lado of [-1, 1]) {
     superficie('lona', {cor: lonaSombra, duplaFace: true}, 10, 4, (u, v) => {
-      const z = (u - .5) * HALF_D * 2;
+      // 3 cm de sobra em cada ponta: a parede cobre a quina com os oitões
+      const z = (u - .5) * (HALF_D * 2 + .06);
       const x = lado * (HALF_W + v * .05) + lado * Math.sin(Math.PI * u * 5) * .014 * v;
-      const y = Math.max(.02, EAVE * (1 - v));
+      const y = EAVE * (1 - v);
       return [x, y, z];
-    });
+    }, [lado, .15, 0]);
     // barra de reforço na base
     superficie('lona', {cor: lonaCostura, duplaFace: true}, 10, 1, (u, v) => [
       lado * (HALF_W + .02), .05 + v * .07, (u - .5) * HALF_D * 2,
-    ]);
+    ], [lado, 0, 0]);
   }
 
   // ---------- Lona: oitão dos fundos ----------
+  // a lona sobra 6 cm além de cada parede lateral: sem isso a quina vira uma fresta
+  // de 1 px no rasterizador e deixa ver o piso de dentro.
+  const SOBRA_QUINA = .06;
   superficie('lona', {cor: lonaClara, duplaFace: true}, 8, 3, (u, v) => {
-    const x = (u - .5) * 2 * HALF_W;
-    return [x, .02 + v * (EAVE - .02), -HALF_D - Math.sin(Math.PI * u) * .03];
-  });
+    const x = (u - .5) * 2 * (HALF_W + SOBRA_QUINA);
+    return [x, v * EAVE, -HALF_D - Math.sin(Math.PI * u) * .03];
+  }, [0, .2, -1]);
   superficie('lona', {cor: lonaSombra, duplaFace: true}, 8, 4, (u, v) => {
     const x = (u - .5) * 2 * HALF_W * (1 - v);
-    const y = EAVE + v * (RIDGE - EAVE) - Math.sin(Math.PI * u) * .02 * v;
+    // começa 8 cm abaixo do beiral para cobrir o encontro com a parede do oitão
+    const y = EAVE - .08 + v * (RIDGE - EAVE + .08) - Math.sin(Math.PI * u) * .02 * v;
     return [x, y, -HALF_D - Math.sin(Math.PI * u) * .025];
-  });
-  // respiro do oitão: aba triangular solta
-  superficie('lona', {cor: lonaCostura, duplaFace: true}, 3, 2, (u, v) => {
-    const x = (u - .5) * .3;
-    const y = RIDGE - .34 + v * (.24 + Math.abs(u - .5) * .1);
-    return [x, y, -HALF_D - .035 - v * .015];
-  });
-
+  }, [0, .6, -1]);
   // ---------- Lona: frente com portinhola ----------
   for (const lado of [-1, 1]) {
     // parede ao lado da portinhola
     superficie('lona', {cor: lonaSombra, duplaFace: true}, 4, 3, (u, v) => {
       const x = lado * (DOOR_W + u * (HALF_W - DOOR_W));
-      return [x, .02 + v * (EAVE - .02), HALF_D + Math.sin(Math.PI * u) * .015];
-    });
+      return [x, v * EAVE, HALF_D + Math.sin(Math.PI * u) * .015];
+    }, [0, .2, 1]);
     // oitão da frente, do beiral até a encosta da cumeeira
     superficie('lona', {cor: lonaClara, duplaFace: true}, 4, 4, (u, v) => {
       const x = lado * (DOOR_W + u * (HALF_W - DOOR_W));
       const topo = alturaBeiral(x);
-      return [x, EAVE + v * (topo - EAVE), HALF_D + Math.sin(Math.PI * u) * .02];
-    });
+      return [x, EAVE - .08 + v * (topo - EAVE + .08), HALF_D + Math.sin(Math.PI * u) * .02];
+    }, [0, .6, 1]);
   }
   // faixa triangular acima da portinhola
   superficie('lona', {cor: lonaClara, duplaFace: true}, 4, 4, (u, v) => {
     const x = (u - .5) * 2 * DOOR_W * (1 - v);
     return [x, alturaBeiral(DOOR_W) + v * (RIDGE - alturaBeiral(DOOR_W)), HALF_D + .015];
-  });
+  }, [0, .8, 1]);
 
   // porta enrolada à direita e aba caída à esquerda
   cilindro('lona', {cor: lonaRolo, duplaFace: true}, [DOOR_W + .06, .8, HALF_D + .01], .075, .055, 1.5, [0, 0, .04], 10);
@@ -177,11 +198,11 @@ export function buildTentModel(): T.Group {
     const x = -DOOR_W + u * .42;
     const y = 1.5 - v * 1.48;
     return [x + Math.sin(Math.PI * u) * .03, Math.max(.03, y), HALF_D + .05 - v * .06 + Math.sin(Math.PI * u) * .02];
-  });
+  }, [-.2, 0, 1]);
 
   // remendos costurados, só textura de leitura
   for (const [x, y, z, w, h] of [[-.78, 1.24, HALF_D - .12, .3, .22], [.82, .44, HALF_D - .05, .26, .19], [-.9, .3, -HALF_D + .06, .24, .2]]) {
-    superficie('lona', {cor: lonaRemendo, duplaFace: true}, 2, 2, (u, v) => [x + (u - .5) * w, y + (v - .5) * h, z]);
+    superficie('lona', {cor: lonaRemendo, duplaFace: true}, 2, 2, (u, v) => [x + (u - .5) * w, y + (v - .5) * h, z], [0, 0, Math.sign(z)]);
   }
 
   // ---------- Estrutura de madeira ----------
@@ -216,8 +237,8 @@ export function buildTentModel(): T.Group {
   }
 
   // ---------- Interior ----------
-  superficie('interior', {cor: interiorEscuro}, 4, 4, (u, v) => [(u - .5) * 1.7, v * 1.9, HALF_D - .62]);
-  superficie('interior', {cor: lonaChao}, 5, 4, (u, v) => [(u - .5) * 1.9, .012, (v - .5) * 2.6]);
+  superficie('interior', {cor: interiorEscuro}, 4, 4, (u, v) => [(u - .5) * 1.1, v * 1.35, .15], [0, 0, 1]);
+  superficie('interior', {cor: lonaChao}, 5, 4, (u, v) => [(u - .5) * 1.9, .012, (v - .5) * 2.6], [0, 1, 0]);
   // saco de dormir enrolado e mochila, visíveis pela portinhola
   cilindro('interior', {cor: lonaRolo}, [-.42, .13, .9], .13, .13, .78, [0, 0, Math.PI / 2], 10);
   anel('cordas', {cor: corda}, [-.42, .13, .9], .135, .012, [0, Math.PI / 2, 0]);
