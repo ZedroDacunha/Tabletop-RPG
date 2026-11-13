@@ -8,9 +8,9 @@ const FOLGA_DETALHE = .006;
 /** Mesmo tecido usado para a água, incluindo as dobras entre faixas. */
 function pontoAgua(lado: number, aoLongo: number, v: number): Ponto {
   const u = aoLongo * FAIXAS - Math.floor(aoLongo * FAIXAS);
-  const z = (aoLongo - .5) * (HALF_D * 2 + .06);
-  const x = lado * (v * (HALF_W + .08) + Math.sin(aoLongo * Math.PI * 8) * .011 * Math.sin(Math.PI * v));
-  const y = RIDGE + v * (EAVE - .12 - RIDGE) - Math.sin(Math.PI * aoLongo) * .05 * (1 - v * .4)
+  const z = (aoLongo - .5) * (HALF_D * 2);
+  const x = lado * (v * HALF_W + Math.sin(aoLongo * Math.PI * 8) * .011 * Math.sin(Math.PI * v));
+  const y = RIDGE + v * (EAVE - RIDGE) - Math.sin(Math.PI * aoLongo) * .05 * (1 - v * .4)
     + Math.sin(Math.PI * 2 * u) * .007 * (1 - v);
   return [x, y, z];
 }
@@ -60,35 +60,30 @@ export function construirLona({superficie}: ConstrutorTenda) {
 
   // ---------- Lona: paredes laterais, com saia no chão ----------
   for (const lado of [-1, 1]) {
-    superficie('lona', {cor: lonaSombra, duplaFace: true}, 10, 4, (u, v) => {
-      // 3 cm de sobra em cada ponta: a parede cobre a quina com os oitões
-      const z = (u - .5) * (HALF_D * 2 + .06);
-      const x = lado * (HALF_W + v * .05) + lado * Math.sin(Math.PI * u * 5) * .014 * v;
-      const y = EAVE * (1 - v);
-      return [x, y, z];
+    const segmentos = FAIXAS * SEGMENTOS_COMPRIMENTO;
+    const alturaBeiral = (u: number) => amostrarAgua(lado, u, 1)[1];
+    superficie('lona', {cor: lonaSombra, duplaFace: true}, segmentos, 4, (u, v) => {
+      // Cada vértice superior coincide com o beiral, inclusive onde a lona cede.
+      const z = (u - .5) * (HALF_D * 2);
+      const x = lado * (HALF_W + Math.sin(Math.PI * u * 5) * .014 * v);
+      return [x, alturaBeiral(u) * (1 - v), z];
     }, [lado, .15, 0]);
-    // Faixa fixada à mesma parede inclinada, com a ondulação correspondente.
-    // A posição é interpolada na grade da parede, para não atravessá-la.
-    superficie('lona', {cor: lonaCostura, duplaFace: true}, 10, 1, (u, v) => {
+    // Faixa junto à parede, sem prolongar a barra além das quinas.
+    superficie('lona', {cor: lonaCostura, duplaFace: true}, segmentos, 1, (u, v) => {
       const altura = .05 + v * .07;
-      const t = 1 - altura / EAVE;
-      const x = lado * (HALF_W + t * .05 + Math.sin(Math.PI * u * 5) * .014 * t + FOLGA_DETALHE);
-      return [x, altura, (u - .5) * (HALF_D * 2 + .06)];
+      const t = 1 - altura / alturaBeiral(u);
+      const x = lado * (HALF_W + Math.sin(Math.PI * u * 5) * .014 * t + FOLGA_DETALHE);
+      return [x, altura, (u - .5) * (HALF_D * 2)];
     }, [lado, 0, 0]);
   }
 
   // ---------- Lona: oitão dos fundos ----------
-  // a lona sobra 6 cm além de cada parede lateral: sem isso a quina vira uma fresta
-  // de 1 px no rasterizador e deixa ver o piso de dentro.
-  const SOBRA_QUINA = .06;
-  superficie('lona', {cor: lonaClara, duplaFace: true}, 8, 3, (u, v) => {
-    const x = (u - .5) * 2 * (HALF_W + SOBRA_QUINA);
-    return [x, v * EAVE, -HALF_D - Math.sin(Math.PI * u) * .03];
-  }, [0, .2, -1]);
-  superficie('lona', {cor: lonaSombra, duplaFace: true}, 8, 4, (u, v) => {
-    const x = (u - .5) * 2 * HALF_W * (1 - v);
-    // começa 8 cm abaixo do beiral para cobrir o encontro com a parede do oitão
-    const y = EAVE - .08 + v * (RIDGE - EAVE + .08) - Math.sin(Math.PI * u) * .02 * v;
-    return [x, y, -HALF_D - Math.sin(Math.PI * u) * .025];
-  }, [0, .6, -1]);
+  // Os oitões compartilham as mesmas bordas das paredes e do telhado:
+  // sem sobras retangulares nas quinas e sem sobreposição coplanar.
+  superficie('lona', {cor: lonaClara, duplaFace: true}, 8, 3, (u, v) => [
+    (u - .5) * 2 * HALF_W, v * EAVE, -HALF_D,
+  ], [0, 0, -1]);
+  superficie('lona', {cor: lonaSombra, duplaFace: true}, 8, 4, (u, v) => [
+    (u - .5) * 2 * HALF_W * (1 - v), EAVE + v * (RIDGE - EAVE), -HALF_D,
+  ], [0, 0, -1]);
 }

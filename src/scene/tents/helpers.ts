@@ -1,6 +1,7 @@
 import * as T from 'three';
 import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type {ParteTenda as Parte, Acabamento, Ponto} from './types';
+import {criarTexturasCorda, PASSO_CORDA} from './ropeTexture';
 
 /** Agrupa as geometrias por parte e acabamento para limitar as draw calls. */
 export function criarConstrutor() {
@@ -57,6 +58,12 @@ export function criarConstrutor() {
 
   const anel = (parte: Parte, acabamento: Acabamento, p: Ponto, raio: number, tubo: number, r: Ponto = [Math.PI / 2, 0, 0]) => {
     const g = new T.TorusGeometry(raio, tubo, 5, 12);
+    if (parte === 'cordas') {
+      const uv = g.getAttribute('uv');
+      // Número inteiro de voltas garante continuidade ao fechar o anel.
+      const voltas = Math.max(1, Math.round(2 * Math.PI * raio / PASSO_CORDA));
+      for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getY(i), uv.getX(i) * voltas);
+    }
     const m = new T.Matrix4().compose(new T.Vector3(...p), new T.Quaternion().setFromEuler(new T.Euler(...r)), new T.Vector3(1, 1, 1));
     guardar(parte, acabamento, g.applyMatrix4(m));
   };
@@ -66,13 +73,19 @@ export function criarConstrutor() {
     const inicio = new T.Vector3(...a), fim = new T.Vector3(...b);
     const meio = inicio.clone().add(fim).multiplyScalar(.5);
     meio.y -= barriga;
-    const trecho = (pa: T.Vector3, pb: T.Vector3, r: number) => {
-      const g = new T.CylinderGeometry(r * .85, r, pa.distanceTo(pb), 7, 1, false);
+    const trecho = (pa: T.Vector3, pb: T.Vector3, r: number, inicioUV: number) => {
+      const comprimento = pa.distanceTo(pb);
+      // Os dois trechos da corda precisam ter o mesmo raio na junção.
+      const g = new T.CylinderGeometry(parte === 'cordas' ? r : r * .85, r, comprimento, 7, 1, false);
+      if (parte === 'cordas') {
+        const uv = g.getAttribute('uv');
+        for (let i = 0; i < uv.count; i++) uv.setY(i, inicioUV + uv.getY(i) * comprimento / PASSO_CORDA);
+      }
       const m = new T.Matrix4().compose(pa.clone().add(pb).multiplyScalar(.5), new T.Quaternion().setFromUnitVectors(new T.Vector3(0, 1, 0), pb.clone().sub(pa).normalize()), new T.Vector3(1, 1, 1));
       guardar(parte, acabamento, g.applyMatrix4(m));
     };
-    trecho(inicio, meio, raio);
-    trecho(meio, fim, raio);
+    trecho(inicio, meio, raio, 0);
+    trecho(meio, fim, raio, inicio.distanceTo(meio) / PASSO_CORDA);
   };
 
   const montar = (): T.Group => {
@@ -90,6 +103,7 @@ export function criarConstrutor() {
         metalness: acabamento.metal ?? 0,
         flatShading: acabamento.fosco ?? false,
         side: acabamento.duplaFace ? T.DoubleSide : T.FrontSide,
+        ...(chave.startsWith('cordas|') ? {...criarTexturasCorda(), bumpScale: .0015} : {}),
       });
       const malha = new T.Mesh(fundida, material);
       malha.name = chave.split('|')[0];

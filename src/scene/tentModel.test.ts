@@ -5,12 +5,13 @@ import * as T from 'three';
 import {buildTentModel} from './tentModel';
 import {criarConstrutor} from './tents/helpers';
 import {amostrarAgua, construirLona} from './tents/parts/canvas';
+import {PASSO_CORDA} from './tents/ropeTexture';
 import previews from '../features/assets/modelPreviews.json';
 import {direcaoDeAngulos, renderModelPreview} from '../../scripts/preview-raster';
 
 const HALF_W = 1.24, HALF_D = 1.6, RIDGE = 2.18, EAVE = .62, DOOR_W = .52;
 function malhas(model: T.Group) { return model.children as T.Mesh<T.BufferGeometry, T.MeshStandardMaterial>[]; }
-function descartar(model: T.Group) { for (const m of malhas(model)) { m.geometry.dispose(); m.material.dispose(); } }
+function descartar(model: T.Group) { for (const m of malhas(model)) { m.geometry.dispose(); m.material.map?.dispose(); m.material.bumpMap?.dispose(); m.material.dispose(); } }
 /** Decodifica o PNG do rasterizador (filtro 0, RGBA) e conta pixels diferentes. */
 function contarDiferencas(a: Buffer, b: Buffer) {
   const ler = (png: Buffer) => {
@@ -75,6 +76,23 @@ test('entrance has a clear passage and canvas above and beside it', () => {
   descartar(model);
 });
 
+test('the entrance looks through the interior without the dark panel', () => {
+  const model = buildTentModel(), ray = new T.Raycaster();
+  // A linha de visão passa acima dos acessórios, da entrada até a lona dos fundos.
+  for (const x of [-.15, 0, .15]) for (const y of [.75, 1.1]) {
+    ray.set(new T.Vector3(x, y, HALF_D - .1), new T.Vector3(0, 0, -1));
+    const hit = ray.intersectObject(model, true)[0];
+    assert.ok(hit, 'lona dos fundos ausente');
+    assert.equal(hit.object.name, 'lona', `objeto obstrui o interior em ${x}, ${y}`);
+    assert.ok(hit.point.z < -HALF_D + .1, 'obstáculo antes dos fundos');
+  }
+  // O piso e os dois acessórios continuam presentes.
+  const coresInterior = malhas(model).filter((m) => m.name === 'interior').map((m) => m.material.color.getHexString());
+  for (const cor of ['8b7c5c', 'b3a075', '6d5a3e']) assert.ok(coresInterior.includes(cor));
+  assert.ok(!coresInterior.includes('332f26'));
+  descartar(model);
+});
+
 test('roof patch and seams stay attached to the triangulated canvas', () => {
   const builder = criarConstrutor();
   construirLona(builder);
@@ -111,6 +129,69 @@ test('roof patch and seams stay attached to the triangulated canvas', () => {
   descartar(model);
 });
 
+test('canvas edges meet at the eaves and end walls without projecting past the corners', () => {
+  const builder = criarConstrutor();
+  construirLona(builder);
+  const model = builder.montar();
+  const canvas = malhas(model).filter((m) => ['cdba8c', 'c1ad80'].includes(m.material.color.getHexString()));
+  // O telhado e a lateral devem compartilhar cada vértice do beiral, mesmo onde a lona cede.
+  for (const lado of [-1, 1]) for (let i = 0; i <= 24; i++) {
+    const point = new T.Vector3(...amostrarAgua(lado, i / 24, 1));
+    let noTelhado = false, naParede = false;
+    for (const mesh of canvas) {
+      const pos = mesh.geometry.getAttribute('position'), normal = mesh.geometry.getAttribute('normal');
+      for (let j = 0; j < pos.count; j++) {
+        if (point.distanceTo(new T.Vector3().fromBufferAttribute(pos, j)) > 1e-5) continue;
+        if (normal.getY(j) > .3) noTelhado = true;
+        if (Math.abs(normal.getX(j)) > .95 && Math.abs(normal.getY(j)) < .3) naParede = true;
+      }
+    }
+    assert.ok(noTelhado && naParede, `fresta no beiral ${lado}, ${i}/24`);
+  }
+  // Nos planos de extremidade, a lona não pode passar do encontro das paredes.
+  for (const mesh of canvas) {
+    const pos = mesh.geometry.getAttribute('position');
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i), z = pos.getZ(i);
+      assert.ok(Math.abs(z) <= HALF_D + 1e-5, `lona além da extremidade: ${z}`);
+      if (Math.abs(Math.abs(z) - HALF_D) < 1e-5) {
+        assert.ok(Math.abs(x) <= HALF_W + 1e-5, `ponta da lona além da quina: ${x}`);
+      }
+    }
+  }
+  descartar(model);
+});
+
+test('entrance borders stay below the roof profile', () => {
+  const model = buildTentModel();
+  const border = malhas(model).find((m) => m.name === 'lona' && m.material.color.getHexString() === '9c895f');
+  assert.ok(border);
+  const pos = border.geometry.getAttribute('position');
+  let checked = 0;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    if (Math.abs(z - (HALF_D + .025)) > 1e-5) continue;
+    const roof = RIDGE + Math.abs(x) / HALF_W * (EAVE - RIDGE);
+    assert.ok(y <= roof + 1e-5, `borda da porta passa pelo teto: ${x}, ${y}`);
+    checked++;
+  }
+  assert.ok(checked > 0, 'bordas da entrada não encontradas');
+  descartar(model);
+});
+
+test('the four canvas corners stay closed when viewed diagonally', () => {
+  const model = buildTentModel(), ray = new T.Raycaster();
+  const canvas = malhas(model).filter((m) => m.name === 'lona');
+  for (const side of [-1, 1]) for (const end of [-1, 1]) for (const y of [.08, .25, .45, .58]) {
+    const origin = new T.Vector3(side * (HALF_W + .25), y, end * (HALF_D + .25));
+    const target = new T.Vector3(side * (HALF_W - .04), y, end * (HALF_D - .04));
+    ray.set(origin, target.sub(origin).normalize());
+    const hit = ray.intersectObjects(canvas, false)[0];
+    assert.ok(hit && hit.distance < .39, `fresta na quina ${side}, ${end}, ${y}`);
+  }
+  descartar(model);
+});
+
 test('roof covers the rafters near both ends', () => {
   const model = buildTentModel(), ray = new T.Raycaster();
   const canvas = malhas(model).filter((m) => m.name === 'lona' && ['cdba8c', 'c1ad80'].includes(m.material.color.getHexString()));
@@ -123,6 +204,64 @@ test('roof covers the rafters near both ends', () => {
     assert.ok(pano, 'lona ausente sobre o caibro');
     if (madeira) assert.ok(madeira.distance >= pano.distance - .001, `caibro acima da lona em ${lado}, ${aoLongo}, ${v}`);
   }
+  descartar(model);
+});
+
+test('rope alone receives deterministic seamless color and bump textures', () => {
+  const a = buildTentModel(), b = buildTentModel(), clone = a.clone(true);
+  const rope = malhas(a).find((m) => m.name === 'cordas')!;
+  const otherRope = malhas(b).find((m) => m.name === 'cordas')!;
+  assert.ok(rope.material.map instanceof T.DataTexture);
+  assert.ok(rope.material.bumpMap instanceof T.DataTexture);
+  assert.equal(rope.material.map.colorSpace, T.SRGBColorSpace);
+  assert.equal(rope.material.bumpMap.colorSpace, T.NoColorSpace);
+  assert.equal(rope.material.map.wrapS, T.RepeatWrapping);
+  assert.equal(rope.material.map.wrapT, T.RepeatWrapping);
+  assert.ok(rope.material.bumpScale > 0);
+  assert.deepEqual(rope.material.map.image.data, (otherRope.material.map as T.DataTexture).image.data);
+  assert.deepEqual(rope.material.bumpMap.image.data, (otherRope.material.bumpMap as T.DataTexture).image.data);
+  const samples = rope.material.map.image.data as Uint8Array;
+  assert.ok(new Set(samples.filter((_, i) => i % 4 === 0)).size > 20, 'textura sem variação');
+  const uv = rope.geometry.getAttribute('uv');
+  assert.equal(uv.count, rope.geometry.getAttribute('position').count);
+  for (const n of uv.array) assert.ok(Number.isFinite(n));
+  assert.ok(Math.max(...Array.from(uv.array)) > 2, 'textura não se repete ao longo da corda');
+  assert.equal(malhas(clone).find((m) => m.name === 'cordas')!.material, rope.material);
+  for (const m of malhas(a).filter((m) => m.name !== 'cordas')) assert.equal(m.material.map, null);
+  descartar(a); descartar(b);
+});
+
+test('rope UVs continue through the sag and close around rings', () => {
+  const builder = criarConstrutor();
+  builder.viga('cordas', {cor: '#a2906f'}, [0, 0, 0], [0, 2, 0], .014);
+  const model = builder.montar(), geo = malhas(model)[0].geometry;
+  const pos = geo.getAttribute('position'), uv = geo.getAttribute('uv'), normal = geo.getAttribute('normal');
+  let seamVertices = 0;
+  for (let i = 0; i < pos.count; i++) {
+    if (Math.abs(pos.getY(i) - 1) > 1e-5 || Math.abs(normal.getY(i)) > .5) continue;
+    assert.ok(Math.abs(uv.getY(i) - 1 / PASSO_CORDA) < 1e-5, 'textura interrompida no meio da corda');
+    assert.ok(Math.abs(Math.hypot(pos.getX(i), pos.getZ(i)) - .014) < 1e-5, 'raio muda no meio da corda');
+    seamVertices++;
+  }
+  assert.ok(seamVertices >= 16);
+  descartar(model);
+
+  const ringBuilder = criarConstrutor();
+  ringBuilder.anel('cordas', {cor: '#a2906f'}, [0, 0, 0], .085, .012);
+  const ring = ringBuilder.montar(), ringUV = malhas(ring)[0].geometry.getAttribute('uv');
+  const fim = Math.max(...Array.from({length: ringUV.count}, (_, i) => ringUV.getY(i)));
+  assert.ok(fim > 0 && Math.abs(fim - Math.round(fim)) < 1e-6, 'textura não fecha no anel');
+  descartar(ring);
+});
+
+test('model preview renders the rope texture', () => {
+  const model = buildTentModel(), rope = malhas(model).find((m) => m.name === 'cordas')!;
+  const textured = renderModelPreview(model, {largura: 640, altura: 460});
+  const map = rope.material.map;
+  rope.material.map = null;
+  const plain = renderModelPreview(model, {largura: 640, altura: 460});
+  rope.material.map = map;
+  assert.ok(contarDiferencas(textured, plain) > 20, 'textura ausente da prévia');
   descartar(model);
 });
 
