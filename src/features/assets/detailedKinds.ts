@@ -1,6 +1,6 @@
 export const DETAILED_KINDS = [
  'willow','fern','flowers','stump','boulder','reeds',
- 'cottage','gate','stonewall','woodfloor','palisade','dock',
+ 'cottage','gate','stonewall','woodfloor','palisade','dock','tent',
  'table','chair','bench','bed','bookshelf','counter',
  'bedroll','cookingpot','supplystack','torch','brazier','candles',
  'cage','sarcophagus','spikes','gravestone','marketstall','weaponrack','pots','signpost',
