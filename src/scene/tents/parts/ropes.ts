@@ -1,5 +1,6 @@
 import type {ConstrutorTenda} from '../helpers';
-import {HALF_D, RIDGE, madeiraEscura, corda} from '../types';
+import {HALF_D, RIDGE, corda} from '../types';
+import {construirEstaca} from './stakes';
 import type {Ponto} from '../types';
 
 const ANGULO_ESTACA = .38;
@@ -7,7 +8,8 @@ const RAIO_TIRANTE = .011;
 const RAIO_VOLTA = .01;
 
 /** Tirantes amarrados na cumeeira e nas estacas inclinadas. */
-export function construirCordasEEstacas({viga, anel, cilindro}: ConstrutorTenda) {
+export function construirCordasEEstacas(construtor: ConstrutorTenda) {
+  const {viga, anel} = construtor;
   for (const extremidade of [-1, 1]) for (const lado of [-1, 1]) {
     const zEstaca = extremidade * (HALF_D + .78);
     const xEstaca = lado * 1.62;
@@ -16,8 +18,7 @@ export function construirCordasEEstacas({viga, anel, cilindro}: ConstrutorTenda)
     const eixoEstaca = (distancia: number): Ponto => [
       xEstaca + lado * seno * distancia, .1 + cosseno * distancia, zEstaca,
     ];
-    cilindro('estacas', {cor: madeiraEscura, fosco: true}, [xEstaca, .1, zEstaca],
-      .022, .03, .3, [0, 0, -lado * ANGULO_ESTACA], 6);
+    construirEstaca(construtor, xEstaca, zEstaca, lado, ANGULO_ESTACA);
 
     // Duas voltas ao redor da madeira, lado a lado. A última toca o tirante.
     // Em Euler XYZ, a inclinação é no eixo Y antes de deitar o anel.

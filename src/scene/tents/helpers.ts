@@ -2,6 +2,7 @@ import * as T from 'three';
 import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type {ParteTenda as Parte, Acabamento, Ponto} from './types';
 import {criarTexturasCorda, PASSO_CORDA} from './ropeTexture';
+import {criarTexturasMadeiraEstaca} from './woodTexture';
 
 /** Agrupa as geometrias por parte e acabamento para limitar as draw calls. */
 export function criarConstrutor() {
@@ -104,6 +105,7 @@ export function criarConstrutor() {
         flatShading: acabamento.fosco ?? false,
         side: acabamento.duplaFace ? T.DoubleSide : T.FrontSide,
         ...(chave.startsWith('cordas|') ? {...criarTexturasCorda(), bumpScale: .0015} : {}),
+        ...(chave.startsWith('estacas|') ? {...criarTexturasMadeiraEstaca(), bumpScale: .0015} : {}),
       });
       const malha = new T.Mesh(fundida, material);
       malha.name = chave.split('|')[0];
@@ -114,7 +116,7 @@ export function criarConstrutor() {
     });
     return modelo;
   };
-  return {superficie, caixa, cilindro, anel, viga, montar};
+  return {guardar, superficie, caixa, cilindro, anel, viga, montar};
 }
 
 export type ConstrutorTenda = ReturnType<typeof criarConstrutor>;
