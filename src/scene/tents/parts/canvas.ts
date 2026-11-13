@@ -3,6 +3,7 @@ import {HALF_W, HALF_D, RIDGE, EAVE, lonaClara, lonaSombra, lonaCostura, lonaRem
 import type {Acabamento, Ponto} from '../types';
 import {uvTelhado, uvParedeLateral, uvParedeExtremidade} from '../canvasTexture';
 import {PASSO_PONTO} from '../seamTexture';
+import {INICIO_REMENDO, FIM_REMENDO, TOPO_REMENDO, BASE_REMENDO} from '../patchTexture';
 
 const FAIXAS = 4, SEGMENTOS_COMPRIMENTO = 6, SEGMENTOS_AGUA = 6;
 const FOLGA_DETALHE = .006;
@@ -59,9 +60,9 @@ export function construirLona({superficie}: ConstrutorTenda) {
 
     // Remendo na água: os limites coincidem com a grade da lona, evitando
     // cruzar triângulos que possuem inclinações diferentes.
-    if (lado === -1) superficie('lona', {cor: lonaRemendo, duplaFace: true, textura: 'trama'}, 2, 1,
-      (u, v) => detalheAgua(lado, (19 + 2 * u) / 24, (3 + v) / 6), [lado, .9, 0],
-      (u, v) => uvTelhado((19 + 2 * u) / 24, (3 + v) / 6));
+    if (lado === -1) superficie('lona', {cor: lonaRemendo, duplaFace: true, textura: 'remendo'}, 2, 1,
+      (u, v) => detalheAgua(lado, INICIO_REMENDO + (FIM_REMENDO - INICIO_REMENDO) * u, TOPO_REMENDO + (BASE_REMENDO - TOPO_REMENDO) * v), [lado, .9, 0],
+      (u, v) => [u, v]);
   }
 
   // ---------- Lona: paredes laterais, com saia no chão ----------

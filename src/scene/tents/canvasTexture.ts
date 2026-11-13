@@ -19,18 +19,24 @@ export function uvParedeExtremidade(x: number, y: number): [number, number] {
   return [(x + HALF_W) / TAMANHO_TRAMA, y / TAMANHO_TRAMA];
 }
 
+/** Altura periódica da mesma trama, usada também no tecido do remendo. */
+export function alturaTrama(u: number, v: number): number {
+  const fios = 16, tau = Math.PI * 2;
+  const urdume = Math.cos(tau * fios * u), trama = Math.cos(tau * fios * v);
+  const alternancia = Math.cos(Math.PI * fios * u) * Math.cos(Math.PI * fios * v);
+  return T.MathUtils.clamp(.5 + .21 * (urdume + trama) + .08 * alternancia * (urdume - trama), 0, 1);
+}
+
 /** Trama simples de algodão cru: urdume e trama alternam a passagem sobre/baixo.
  * A cor é neutra para preservar os tons da lona; não há sujeira ou desgaste.
  */
 export function criarTexturasLona() {
-  const tamanho = 128, fios = 16, tau = Math.PI * 2;
+  const tamanho = 128;
   const cor = new Uint8Array(tamanho * tamanho * 4);
   const relevo = new Uint8Array(tamanho * tamanho * 4);
   for (let y = 0; y < tamanho; y++) for (let x = 0; x < tamanho; x++) {
     const u = (x + .5) / tamanho, v = (y + .5) / tamanho;
-    const urdume = Math.cos(tau * fios * u), trama = Math.cos(tau * fios * v);
-    const alternancia = Math.cos(Math.PI * fios * u) * Math.cos(Math.PI * fios * v);
-    const altura = T.MathUtils.clamp(.5 + .21 * (urdume + trama) + .08 * alternancia * (urdume - trama), 0, 1);
+    const altura = alturaTrama(u, v);
     const brilho = Math.round(225 + 30 * altura);
     const h = Math.round(altura * 255);
     const i = (y * tamanho + x) * 4;

@@ -59,17 +59,19 @@ function niveisTextura(map: T.DataTexture): NivelTextura[] {
   return niveis;
 }
 
-/** Amostra bilinear com repetição e, se necessário, filtro entre níveis mip. */
+/** Amostra bilinear respeitando repetição ou bordas e, se necessário, filtro entre níveis mip. */
 function amostrarTextura(map: T.DataTexture, u: number, v: number, nivel = 0): [number, number, number] {
   const niveis = nivel > 0 ? niveisTextura(map) : [map.image];
   const indice = Math.min(niveis.length - 1, Math.max(0, Math.floor(nivel)));
   const amostrar = ({data, width, height}: NivelTextura): [number, number, number] => {
-    const x = (((u % 1) + 1) % 1) * width - .5;
-    const y = (((v % 1) + 1) % 1) * height - .5;
+    const coord = (valor: number, wrap: T.Wrapping) => wrap === T.ClampToEdgeWrapping ? T.MathUtils.clamp(valor, 0, 1) : ((valor % 1) + 1) % 1;
+    const texel = (valor: number, tamanho: number, wrap: T.Wrapping) => wrap === T.ClampToEdgeWrapping ? T.MathUtils.clamp(valor, 0, tamanho - 1) : ((valor % tamanho) + tamanho) % tamanho;
+    const x = coord(u, map.wrapS) * width - .5;
+    const y = coord(v, map.wrapT) * height - .5;
     const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
     const rgb: [number, number, number] = [0, 0, 0];
     for (let dy = 0; dy <= 1; dy++) for (let dx = 0; dx <= 1; dx++) {
-      const index = (((iy + dy + height) % height) * width + (ix + dx + width) % width) * 4;
+      const index = (texel(iy + dy, height, map.wrapT) * width + texel(ix + dx, width, map.wrapS)) * 4;
       const peso = (dx ? fx : 1 - fx) * (dy ? fy : 1 - fy);
       for (let c = 0; c < 3; c++) rgb[c] += Number(data[index + c]) / 255 * peso;
     }
