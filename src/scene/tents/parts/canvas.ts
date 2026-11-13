@@ -1,7 +1,7 @@
 import type {ConstrutorTenda} from '../helpers';
 import {HALF_W, HALF_D, RIDGE, EAVE, lonaClara, lonaSombra, lonaCostura, lonaRemendo} from '../types';
 import type {Acabamento, Ponto} from '../types';
-import {TAMANHO_TRAMA, uvParedeLateral, uvParedeExtremidade} from '../canvasTexture';
+import {uvTelhado, uvParedeLateral, uvParedeExtremidade} from '../canvasTexture';
 
 const FAIXAS = 4, SEGMENTOS_COMPRIMENTO = 6, SEGMENTOS_AGUA = 6;
 const FOLGA_DETALHE = .006;
@@ -42,8 +42,7 @@ export function construirLona({superficie}: ConstrutorTenda) {
       const acabamento: Acabamento = {cor: faixa % 2 ? lonaClara : lonaSombra, duplaFace: true, textura: 'trama'};
       superficie('lona', acabamento, SEGMENTOS_COMPRIMENTO, SEGMENTOS_AGUA,
         (u, v) => pontoAgua(lado, (faixa + u) / FAIXAS, v), [lado, .9, 0],
-        (u, v) => [(faixa + u) / FAIXAS * 2 * HALF_D / TAMANHO_TRAMA,
-          v * Math.hypot(HALF_W, RIDGE - EAVE) / TAMANHO_TRAMA]);
+        (u, v) => uvTelhado((faixa + u) / FAIXAS, v));
 
       if (faixa > 0) {
         // Duas metades permitem acompanhar a triangulação de cada faixa vizinha.
@@ -57,8 +56,9 @@ export function construirLona({superficie}: ConstrutorTenda) {
 
     // Remendo na água: os limites coincidem com a grade da lona, evitando
     // cruzar triângulos que possuem inclinações diferentes.
-    if (lado === -1) superficie('lona', {cor: lonaRemendo, duplaFace: true}, 2, 1,
-      (u, v) => detalheAgua(lado, (19 + 2 * u) / 24, (3 + v) / 6), [lado, .9, 0]);
+    if (lado === -1) superficie('lona', {cor: lonaRemendo, duplaFace: true, textura: 'trama'}, 2, 1,
+      (u, v) => detalheAgua(lado, (19 + 2 * u) / 24, (3 + v) / 6), [lado, .9, 0],
+      (u, v) => uvTelhado((19 + 2 * u) / 24, (3 + v) / 6));
   }
 
   // ---------- Lona: paredes laterais, com saia no chão ----------
