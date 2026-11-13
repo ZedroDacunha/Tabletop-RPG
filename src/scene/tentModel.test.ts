@@ -332,7 +332,7 @@ test('wall weave follows physical coordinates across each facade and leaves deta
     if (args[1].textura === 'trama' && faixas++ >= 8) { paredes++; builder.superficie(...args); }
   }});
   construirEntrada({...builder, superficie: (...args) => {
-    if (args[1].textura === 'trama') { frente++; builder.superficie(...args); }
+    if (args[1].textura === 'trama' && args[4](.5, .5)[2] === HALF_D) { frente++; builder.superficie(...args); }
   }});
   assert.equal(paredes, 4, 'duas laterais e duas partes do fundo');
   assert.equal(frente, 3, 'dois lados e painel superior da frente');
@@ -359,11 +359,47 @@ test('wall weave follows physical coordinates across each facade and leaves deta
   const entrada = criarConstrutor();
   construirEntrada(entrada);
   const modeloEntrada = entrada.montar();
-  const flap = malhas(modeloEntrada).find((m) => m.name === 'lona' && m.material.color.getHexString() === 'cdba8c' && !m.material.map);
   const seams = malhas(modeloEntrada).find((m) => m.name === 'lona' && m.material.color.getHexString() === '9c895f');
-  assert.ok(flap && !flap.material.bumpMap, 'abas devem ficar para outra etapa');
   assert.ok(seams && !seams.material.map && !seams.material.bumpMap, 'costuras devem permanecer sem alteração');
   descartar(modeloEntrada);
+});
+
+test('both entrance flaps receive a correctly scaled canvas weave without changing seams', () => {
+  const construirAbas = () => {
+    const builder = criarConstrutor();
+    let abas = 0;
+    construirEntrada({...builder, viga: () => {}, superficie: (...args) => {
+      // Apenas as abas ficam levemente à frente do plano da fachada.
+      if (args[4](.5, .5)[2] > HALF_D + .0035 && args[1].cor === '#cdba8c') {
+        abas++;
+        assert.equal(args[1].textura, 'trama');
+        builder.superficie(...args);
+      }
+    }});
+    assert.equal(abas, 2);
+    return builder.montar();
+  };
+  const model = construirAbas(), outro = construirAbas();
+  const flap = malhas(model)[0], material = flap.material;
+  assert.ok(material.map instanceof T.DataTexture && material.bumpMap instanceof T.DataTexture);
+  assert.equal(material.side, T.DoubleSide);
+  assert.ok(material.roughness > .8 && material.bumpScale > 0);
+  assert.deepEqual(material.map.image.data, (malhas(outro)[0].material.map as T.DataTexture).image.data);
+  const pos = flap.geometry.getAttribute('position'), uv = flap.geometry.getAttribute('uv');
+  assert.equal(pos.count, uv.count);
+  let esquerda = 0, direita = 0;
+  for (let i = 0; i < pos.count; i++) {
+    pos.getX(i) < 0 ? esquerda++ : direita++;
+    assert.ok(Math.abs(uv.getX(i) - (pos.getX(i) + HALF_W) / TAMANHO_TRAMA) < 1e-4);
+    assert.ok(Math.abs(uv.getY(i) - pos.getY(i) / TAMANHO_TRAMA) < 1e-4);
+  }
+  assert.ok(esquerda && direita, 'as duas abas devem receber trama');
+  const comTextura = renderModelPreview(model, {largura: 600, altura: 600});
+  const mapa = material.map; material.map = null;
+  const semTextura = renderModelPreview(model, {largura: 600, altura: 600});
+  material.map = mapa;
+  assert.ok(contarDiferencas(comTextura, semTextura) > 500, 'trama não aparece na prévia');
+  descartar(model); descartar(outro);
 });
 
 test('flipped canvas triangles keep their UV coordinates attached to the vertices', () => {
