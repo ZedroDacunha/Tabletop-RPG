@@ -1,7 +1,17 @@
 import * as T from 'three';
+import {HALF_D, HALF_W} from './types';
 
 /** Um mosaico cobre 12 cm de lona; os fios se repetem dentro dele. */
 export const TAMANHO_TRAMA = .12;
+
+/** UVs em metros: mantêm a mesma escala de tecido nas paredes de cada plano. */
+export function uvParedeLateral(z: number, y: number): [number, number] {
+  return [(z + HALF_D) / TAMANHO_TRAMA, y / TAMANHO_TRAMA];
+}
+
+export function uvParedeExtremidade(x: number, y: number): [number, number] {
+  return [(x + HALF_W) / TAMANHO_TRAMA, y / TAMANHO_TRAMA];
+}
 
 /** Trama simples de algodão cru: urdume e trama alternam a passagem sobre/baixo.
  * A cor é neutra para preservar os tons da lona; não há sujeira ou desgaste.

@@ -1,5 +1,6 @@
 import type {ConstrutorTenda} from '../helpers';
 import {HALF_W, HALF_D, RIDGE, EAVE, DOOR_W, DOOR_H, lonaClara, lonaSombra, lonaCostura, corda} from '../types';
+import {uvParedeExtremidade} from '../canvasTexture';
 
 /** Frente da tenda: abertura central de altura útil, com abas presas nas laterais. */
 export function construirEntrada({superficie, viga}: ConstrutorTenda) {
@@ -9,10 +10,13 @@ export function construirEntrada({superficie, viga}: ConstrutorTenda) {
 
   for (const lado of [-1, 1]) {
     // As laterais ocupam somente o espaço entre a abertura e as paredes.
-    superficie('lona', {cor: lonaSombra, duplaFace: true}, 8, 8, (u, v) => {
+    superficie('lona', {cor: lonaSombra, duplaFace: true, textura: 'trama'}, 8, 8, (u, v) => {
       const x = lado * (DOOR_W + u * (HALF_W - DOOR_W));
       return [x, v * topo(x), frente];
-    }, [0, 0, 1]);
+    }, [0, 0, 1], (u, v) => {
+      const x = lado * (DOOR_W + u * (HALF_W - DOOR_W));
+      return uvParedeExtremidade(x, v * topo(x));
+    });
 
     // Bordas reforçadas definem claramente os limites da abertura.
     superficie('lona', {cor: lonaCostura, duplaFace: true}, 1, 6, (u, v) => {
@@ -42,10 +46,13 @@ export function construirEntrada({superficie, viga}: ConstrutorTenda) {
 
   // Painel central acima da passagem, preenchendo até o perfil triangular do teto.
   // A parte inferior é horizontal: não há um buraco entre o teto e a porta.
-  superficie('lona', {cor: lonaClara, duplaFace: true}, 8, 5, (u, v) => {
+  superficie('lona', {cor: lonaClara, duplaFace: true, textura: 'trama'}, 8, 5, (u, v) => {
     const x = (u * 2 - 1) * DOOR_W;
     return [x, DOOR_H + v * (topo(x) - DOOR_H), frente];
-  }, [0, 0, 1]);
+  }, [0, 0, 1], (u, v) => {
+    const x = (u * 2 - 1) * DOOR_W;
+    return uvParedeExtremidade(x, DOOR_H + v * (topo(x) - DOOR_H));
+  });
   superficie('lona', {cor: lonaCostura, duplaFace: true}, 8, 1, (u, v) => {
     const x = (u * 2 - 1) * DOOR_W;
     return [x, Math.min(DOOR_H + v * .035, topo(x) - .004), frente + .003];
