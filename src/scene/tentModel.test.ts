@@ -6,6 +6,7 @@ import {buildTentModel} from './tentModel';
 import {criarConstrutor} from './tents/helpers';
 import {amostrarAgua, construirLona} from './tents/parts/canvas';
 import {construirEntrada} from './tents/parts/entrance';
+import {construirEstaca} from './tents/parts/stakes';
 import {PASSO_CORDA} from './tents/ropeTexture';
 import previews from '../features/assets/modelPreviews.json';
 import {direcaoDeAngulos, renderModelPreview} from '../../scripts/preview-raster';
@@ -284,7 +285,60 @@ test('guy ropes wrap around both the ridge pole and the inclined stakes', () => 
   descartar(model);
 });
 
-test('rope alone receives deterministic seamless color and bump textures', () => {
+test('stakes have a pointed tip, a rope groove and axial UVs', () => {
+  const builder = criarConstrutor();
+  construirEstaca(builder, 0, 0, 1, .38);
+  const model = builder.montar(), stake = malhas(model)[0];
+  const geometry = stake.geometry, pos = geometry.getAttribute('position'), uv = geometry.getAttribute('uv');
+  const inverse = new T.Matrix4().compose(new T.Vector3(0, .1, 0),
+    new T.Quaternion().setFromEuler(new T.Euler(0, 0, -.38)), new T.Vector3(1, 1, 1)).invert();
+  const radiusAt = (altura: number) => {
+    const vertices: T.Vector3[] = [];
+    for (let i = 0; i < pos.count; i++) {
+      const p = new T.Vector3().fromBufferAttribute(pos, i).applyMatrix4(inverse);
+      if (Math.abs(p.y - altura) < 1e-5) {
+        vertices.push(p);
+        assert.ok(Math.abs(uv.getY(i) - (altura + .15) / .3) < 1e-5, 'veios não acompanham o eixo');
+      }
+    }
+    assert.ok(vertices.length > 0, `perfil ausente em ${altura}`);
+    return Math.max(...vertices.map((p) => Math.hypot(p.x, p.z)));
+  };
+  assert.ok(radiusAt(-.15) < .002, 'ponta não afiada');
+  assert.ok(radiusAt(-.065) > .027, 'corpo ausente');
+  assert.ok(radiusAt(.078) < radiusAt(.060), 'entalhe da corda ausente');
+  assert.ok(radiusAt(.15) > .02, 'cabeça da estaca ausente');
+  descartar(model);
+});
+
+test('stake wood material is deterministic, textured and visible in the preview', () => {
+  const a = buildTentModel(), b = buildTentModel();
+  const stake = malhas(a).find((m) => m.name === 'estacas')!;
+  const other = malhas(b).find((m) => m.name === 'estacas')!;
+  const map = stake.material.map, bump = stake.material.bumpMap;
+  assert.ok(map instanceof T.DataTexture && bump instanceof T.DataTexture);
+  assert.equal(map.colorSpace, T.SRGBColorSpace);
+  assert.equal(bump.colorSpace, T.NoColorSpace);
+  assert.equal(map.wrapS, T.RepeatWrapping);
+  assert.equal(map.wrapT, T.RepeatWrapping);
+  assert.ok(stake.material.bumpScale > 0 && stake.material.roughness > .8);
+  assert.deepEqual(map.image.data, (other.material.map as T.DataTexture).image.data);
+  assert.deepEqual(bump.image.data, (other.material.bumpMap as T.DataTexture).image.data);
+  assert.ok(new Set((map.image.data as Uint8Array).filter((_, i) => i % 4 === 0)).size > 20);
+  assert.equal(stake.geometry.getAttribute('uv').count, stake.geometry.getAttribute('position').count);
+  assert.equal(malhas(a.clone(true)).find((m) => m.name === 'estacas')!.material, stake.material);
+  // Usa uma estaca isolada para que a diferença da textura possa ser medida em detalhe.
+  const builder = criarConstrutor(); construirEstaca(builder, 0, 0, 1, .38);
+  const detalhe = builder.montar(), material = malhas(detalhe)[0].material;
+  const texturizada = renderModelPreview(detalhe, {largura: 400, altura: 400});
+  const textura = material.map; material.map = null;
+  const semTextura = renderModelPreview(detalhe, {largura: 400, altura: 400});
+  material.map = textura;
+  assert.ok(contarDiferencas(texturizada, semTextura) > 100, 'prévia sem textura da estaca');
+  descartar(a); descartar(b); descartar(detalhe);
+});
+
+test('rope receives deterministic seamless color and bump textures', () => {
   const a = buildTentModel(), b = buildTentModel(), clone = a.clone(true);
   const rope = malhas(a).find((m) => m.name === 'cordas')!;
   const otherRope = malhas(b).find((m) => m.name === 'cordas')!;
@@ -304,7 +358,7 @@ test('rope alone receives deterministic seamless color and bump textures', () =>
   for (const n of uv.array) assert.ok(Number.isFinite(n));
   assert.ok(Math.max(...Array.from(uv.array)) > 2, 'textura não se repete ao longo da corda');
   assert.equal(malhas(clone).find((m) => m.name === 'cordas')!.material, rope.material);
-  for (const m of malhas(a).filter((m) => m.name !== 'cordas')) assert.equal(m.material.map, null);
+  for (const m of malhas(a).filter((m) => m.name !== 'cordas' && m.name !== 'estacas')) assert.equal(m.material.map, null);
   descartar(a); descartar(b);
 });
 
