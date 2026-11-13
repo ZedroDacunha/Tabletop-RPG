@@ -3,13 +3,14 @@ import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type {ParteTenda as Parte, Acabamento, Ponto} from './types';
 import {criarTexturasCorda, PASSO_CORDA} from './ropeTexture';
 import {criarTexturasMadeiraEstaca} from './woodTexture';
+import {criarTexturasLona} from './canvasTexture';
 
 /** Agrupa as geometrias por parte e acabamento para limitar as draw calls. */
 export function criarConstrutor() {
   const pecas = new Map<string, {geometrias: T.BufferGeometry[]; acabamento: Acabamento}>();
 
   const guardar = (parte: Parte, acabamento: Acabamento, geometria: T.BufferGeometry) => {
-    const chave = `${parte}|${acabamento.cor}|${acabamento.metal ?? 0}|${acabamento.brilho ?? 0}|${acabamento.fosco ? 1 : 0}|${acabamento.duplaFace ? 1 : 0}`;
+    const chave = `${parte}|${acabamento.cor}|${acabamento.metal ?? 0}|${acabamento.brilho ?? 0}|${acabamento.fosco ? 1 : 0}|${acabamento.duplaFace ? 1 : 0}|${acabamento.textura ?? ''}`;
     if (!pecas.has(chave)) pecas.set(chave, {geometrias: [], acabamento});
     pecas.get(chave)!.geometrias.push(geometria);
   };
@@ -19,15 +20,21 @@ export function criarConstrutor() {
    * `paraFora` aponta para o lado de fora da peça; se a malha nascer virada, a ordem dos
    * triângulos é invertida — assim a lona é iluminada por fora em todas as faces.
    */
-  const superficie = (parte: Parte, acabamento: Acabamento, uN: number, vN: number, fn: (u: number, v: number) => Ponto, paraFora: Ponto = [0, 1, 0]) => {
-    const posicoes: number[] = [];
+  const superficie = (parte: Parte, acabamento: Acabamento, uN: number, vN: number, fn: (u: number, v: number) => Ponto, paraFora: Ponto = [0, 1, 0], uvFn?: (u: number, v: number) => [number, number]) => {
+    const posicoes: number[] = [], uvs: number[] = [];
     const ponto = (u: number, v: number) => new T.Vector3(...fn(u, v));
     for (let i = 0; i < uN; i++) for (let j = 0; j < vN; j++) {
       const a = ponto(i / uN, j / vN), b = ponto((i + 1) / uN, j / vN), c = ponto((i + 1) / uN, (j + 1) / vN), d = ponto(i / uN, (j + 1) / vN);
       posicoes.push(...a.toArray(), ...b.toArray(), ...c.toArray(), ...a.toArray(), ...c.toArray(), ...d.toArray());
+      if (uvFn) {
+        const ua = uvFn(i / uN, j / vN), ub = uvFn((i + 1) / uN, j / vN);
+        const uc = uvFn((i + 1) / uN, (j + 1) / vN), ud = uvFn(i / uN, (j + 1) / vN);
+        uvs.push(...ua, ...ub, ...uc, ...ua, ...uc, ...ud);
+      }
     }
     const g = new T.BufferGeometry();
     g.setAttribute('position', new T.Float32BufferAttribute(posicoes, 3));
+    if (uvFn) g.setAttribute('uv', new T.Float32BufferAttribute(uvs, 2));
     g.computeVertexNormals();
     const normais = g.getAttribute('normal');
     const soma = [0, 0, 0];
@@ -38,6 +45,12 @@ export function criarConstrutor() {
         const bx = pos.getX(i + 1), by = pos.getY(i + 1), bz = pos.getZ(i + 1);
         pos.setXYZ(i + 1, pos.getX(i + 2), pos.getY(i + 2), pos.getZ(i + 2));
         pos.setXYZ(i + 2, bx, by, bz);
+        if (uvFn) {
+          const uv = g.getAttribute('uv') as T.BufferAttribute;
+          const u = uv.getX(i + 1), v = uv.getY(i + 1);
+          uv.setXY(i + 1, uv.getX(i + 2), uv.getY(i + 2));
+          uv.setXY(i + 2, u, v);
+        }
       }
       pos.needsUpdate = true;
       g.computeVertexNormals();
@@ -106,6 +119,7 @@ export function criarConstrutor() {
         side: acabamento.duplaFace ? T.DoubleSide : T.FrontSide,
         ...(chave.startsWith('cordas|') ? {...criarTexturasCorda(), bumpScale: .0015} : {}),
         ...(chave.startsWith('estacas|') ? {...criarTexturasMadeiraEstaca(), bumpScale: .0015} : {}),
+        ...(acabamento.textura === 'trama' ? {...criarTexturasLona(), bumpScale: .0007} : {}),
       });
       const malha = new T.Mesh(fundida, material);
       malha.name = chave.split('|')[0];
