@@ -1,6 +1,7 @@
 import type {ConstrutorTenda} from '../helpers';
 import {HALF_W, HALF_D, RIDGE, EAVE, lonaClara, lonaSombra, lonaCostura, lonaRemendo} from '../types';
 import type {Acabamento, Ponto} from '../types';
+import {TAMANHO_TRAMA} from '../canvasTexture';
 
 const FAIXAS = 4, SEGMENTOS_COMPRIMENTO = 6, SEGMENTOS_AGUA = 6;
 const FOLGA_DETALHE = .006;
@@ -38,9 +39,11 @@ export function construirLona({superficie}: ConstrutorTenda) {
   // ---------- Lona: duas águas, quatro faixas costuradas por lado ----------
   for (const lado of [-1, 1]) {
     for (let faixa = 0; faixa < FAIXAS; faixa++) {
-      const acabamento: Acabamento = {cor: faixa % 2 ? lonaClara : lonaSombra, duplaFace: true};
+      const acabamento: Acabamento = {cor: faixa % 2 ? lonaClara : lonaSombra, duplaFace: true, textura: 'trama'};
       superficie('lona', acabamento, SEGMENTOS_COMPRIMENTO, SEGMENTOS_AGUA,
-        (u, v) => pontoAgua(lado, (faixa + u) / FAIXAS, v), [lado, .9, 0]);
+        (u, v) => pontoAgua(lado, (faixa + u) / FAIXAS, v), [lado, .9, 0],
+        (u, v) => [(faixa + u) / FAIXAS * 2 * HALF_D / TAMANHO_TRAMA,
+          v * Math.hypot(HALF_W, RIDGE - EAVE) / TAMANHO_TRAMA]);
 
       if (faixa > 0) {
         // Duas metades permitem acompanhar a triangulação de cada faixa vizinha.

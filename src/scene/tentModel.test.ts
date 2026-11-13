@@ -8,6 +8,7 @@ import {amostrarAgua, construirLona} from './tents/parts/canvas';
 import {construirEntrada} from './tents/parts/entrance';
 import {construirEstaca} from './tents/parts/stakes';
 import {PASSO_CORDA} from './tents/ropeTexture';
+import {TAMANHO_TRAMA} from './tents/canvasTexture';
 import previews from '../features/assets/modelPreviews.json';
 import {direcaoDeAngulos, renderModelPreview} from '../../scripts/preview-raster';
 
@@ -285,6 +286,51 @@ test('guy ropes wrap around both the ridge pole and the inclined stakes', () => 
   descartar(model);
 });
 
+test('roof canvas weave is seamless, deterministic and limited to the roof', () => {
+  const a = buildTentModel(), b = buildTentModel();
+  const roof = malhas(a).filter((m) => m.name === 'lona' && m.material.map instanceof T.DataTexture);
+  const otherRoof = malhas(b).filter((m) => m.name === 'lona' && m.material.map instanceof T.DataTexture);
+  assert.equal(roof.length, 2, 'as duas cores do telhado devem ter trama');
+  assert.equal(malhas(a).filter((m) => m.name === 'lona' && !m.material.map).length, 4, 'paredes e detalhes não devem ser alterados');
+  const slopeLength = Math.hypot(HALF_W, RIDGE - EAVE);
+  for (let n = 0; n < roof.length; n++) {
+    const mesh = roof[n], map = mesh.material.map, bump = mesh.material.bumpMap;
+    assert.ok(map instanceof T.DataTexture && bump instanceof T.DataTexture);
+    assert.equal(map.colorSpace, T.SRGBColorSpace);
+    assert.equal(bump.colorSpace, T.NoColorSpace);
+    assert.equal(map.wrapS, T.RepeatWrapping); assert.equal(map.wrapT, T.RepeatWrapping);
+    assert.ok(map.generateMipmaps && mesh.material.bumpScale > 0 && mesh.material.roughness > .8);
+    assert.deepEqual(map.image.data, (otherRoof[n].material.map as T.DataTexture).image.data);
+    const data = map.image.data as Uint8Array;
+    assert.ok(new Set(data.filter((_, i) => i % 4 === 0)).size > 10, 'trama sem variação');
+    const pos = mesh.geometry.getAttribute('position'), uv = mesh.geometry.getAttribute('uv');
+    assert.equal(uv.count, pos.count);
+    for (let i = 0; i < uv.count; i++) {
+      const along = (pos.getZ(i) + HALF_D) / (2 * HALF_D);
+      assert.ok(Math.abs(uv.getX(i) - along * 2 * HALF_D / TAMANHO_TRAMA) < 1e-4, 'trama desalinhada entre faixas');
+      const across = uv.getY(i) * TAMANHO_TRAMA / slopeLength;
+      const expected = amostrarAgua(Math.sign(pos.getX(i)) || 1, along, across);
+      assert.ok(new T.Vector3(...expected).distanceTo(new T.Vector3().fromBufferAttribute(pos, i)) < 1e-4, 'UV deslocado da geometria');
+    }
+  }
+  assert.equal(malhas(a.clone(true)).find((m) => m.material.map === roof[0].material.map)?.material, roof[0].material);
+  descartar(a); descartar(b);
+});
+
+test('flipped canvas triangles keep their UV coordinates attached to the vertices', () => {
+  const builder = criarConstrutor();
+  builder.superficie('lona', {cor: '#ffffff', textura: 'trama'}, 2, 2,
+    (u, v) => [u, v, 0], [0, 0, -1], (u, v) => [u, v]);
+  const model = builder.montar(), geom = malhas(model)[0].geometry;
+  const pos = geom.getAttribute('position'), uv = geom.getAttribute('uv');
+  for (let i = 0; i < pos.count; i++) {
+    assert.ok(Math.abs(pos.getX(i) - uv.getX(i)) < 1e-6);
+    assert.ok(Math.abs(pos.getY(i) - uv.getY(i)) < 1e-6);
+    assert.ok(geom.getAttribute('normal').getZ(i) < -.99);
+  }
+  descartar(model);
+});
+
 test('stakes have a pointed tip, a rope groove and axial UVs', () => {
   const builder = criarConstrutor();
   construirEstaca(builder, 0, 0, 1, .38);
@@ -358,7 +404,7 @@ test('rope receives deterministic seamless color and bump textures', () => {
   for (const n of uv.array) assert.ok(Number.isFinite(n));
   assert.ok(Math.max(...Array.from(uv.array)) > 2, 'textura não se repete ao longo da corda');
   assert.equal(malhas(clone).find((m) => m.name === 'cordas')!.material, rope.material);
-  for (const m of malhas(a).filter((m) => m.name !== 'cordas' && m.name !== 'estacas')) assert.equal(m.material.map, null);
+  for (const m of malhas(a).filter((m) => m.name !== 'cordas' && m.name !== 'estacas' && m.name !== 'lona')) assert.equal(m.material.map, null);
   descartar(a); descartar(b);
 });
 

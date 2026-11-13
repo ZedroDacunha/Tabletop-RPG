@@ -1,6 +1,6 @@
 /** Partes visíveis do modelo, preservadas para os consumidores existentes. */
 export type ParteTenda = 'lona' | 'estrutura' | 'cordas' | 'estacas' | 'interior';
-export type Acabamento = {cor: string; metal?: number; brilho?: number; fosco?: boolean; duplaFace?: boolean};
+export type Acabamento = {cor: string; metal?: number; brilho?: number; fosco?: boolean; duplaFace?: boolean; textura?: 'trama'};
 export type Ponto = [number, number, number];
 
 // Medidas e acabamentos do modelo de acampamento existente, em metros.
