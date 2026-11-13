@@ -9,8 +9,8 @@ export function construirEstrutura({cilindro, vigaReta, caixa, anel}: Construtor
     for (const lado of [-1, 1]) {
       // A ponta fica recuada para que o raio inclinado não atravesse a lona lateral.
       vigaReta('estrutura', {cor: madeira, fosco: true, textura: 'madeira-estrutura'}, [0, RIDGE - .14, z], [lado * (HALF_W - .035), z > 0 ? .48 : .01, z], .042);
-      // prumo de parede
-      cilindro('estrutura', {cor: madeiraEscura, fosco: true}, [lado * (HALF_W - .03), EAVE / 2, z], .028, .032, EAVE, [0, 0, 0], 7);
+      // Prumo de parede com veios verticais e seção de madeira nas extremidades.
+      cilindro('estrutura', {cor: madeiraEscura, fosco: true, textura: 'madeira-estrutura'}, [lado * (HALF_W - .03), EAVE / 2, z], .028, .032, EAVE, [0, 0, 0], 7);
     }
     // sapatas e amarração no pé das pernas
     for (const lado of [-1, 1]) caixa('estrutura', {cor: madeiraEscura, fosco: true}, [lado * (HALF_W - .02), .03, z], [.14, .06, .2], [0, 0, lado * .12]);
