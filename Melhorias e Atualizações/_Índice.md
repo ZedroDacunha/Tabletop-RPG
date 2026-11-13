@@ -46,6 +46,8 @@ O repositório salta de #2 para #51: as PRs #3–#50 não existem, então a base
 - [[MEL-031 - Tela de edicao organizada com barra docada]] — concluída — A tela de edição passou de quatro blocos flutuando sobre o mapa para uma barra única docada acima da cena, com o painel de propriedades em seções recolhíveis e um rodapé só com dados. O mapa deixou de ser coberto por controles.
 - [[MEL-032 - Biblioteca com cabecalho unico e busca fixa]] — concluída — O painel da biblioteca passou a ter um cabeçalho só — abas com contador e busca presa abaixo delas — em vez de três blocos empilhados antes da primeira peça. Abas, busca e filtros ficaram fora da área rolável; só a lista rola.
 
+- [[MEL-033 - Tenda modelada em cinco partes]] — concluída — A tenda deixou de ser um prisma extrudado e passou a ser montada em cinco partes (lona, estrutura, cordas, estacas e interior), com prévia local por ângulos e seis testes novos.
+
 ## Como adicionar uma nota
 
 1. Copie o modelo de `Melhorias e Atualizações/Melhorias e Atualizações.md`.

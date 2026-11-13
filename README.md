@@ -9,7 +9,7 @@ O histórico do projeto está registrado como notas de [Obsidian](https://obsidi
 - `Bugs e soluções/` — um arquivo por bug (`BUG-XXX - título curto.md`), com causa raiz, correção antes/depois e como validar. Comece pelo índice: `Bugs e soluções/_Índice.md`.
 - `Melhorias e Atualizações/` — um arquivo por entrega (`MEL-XXX - título curto.md`), com motivação, como era antes, decisões descartadas e impacto. Comece pelo índice: `Melhorias e Atualizações/_Índice.md`.
 
-Hoje o cofre tem **32 notas de melhoria** e **5 de bug**. Os modelos para novas notas ficam em `Bugs e soluções/Bugs e soluçoes.md` e `Melhorias e Atualizações/Melhorias e Atualizações.md`. As notas usam frontmatter com tags (sem `#`) e `[[wikilinks]]` entre si.
+Hoje o cofre tem **33 notas de melhoria** e **5 de bug**. Os modelos para novas notas ficam em `Bugs e soluções/Bugs e soluçoes.md` e `Melhorias e Atualizações/Melhorias e Atualizações.md`. As notas usam frontmatter com tags (sem `#`) e `[[wikilinks]]` entre si.
 
 ## Executar
 
@@ -157,7 +157,7 @@ npm test
 npm run build
 ```
 
-A bateria contém 51 testes, incluindo catálogo, busca combinada, categorias, compatibilidade dos mapas e limites geométricos dos 32 novos modelos. A geometria é verificada sem GPU; a conferência visual no navegador disponível usa o modo compatível porque ele não disponibiliza WebGL. O desempenho e o acabamento da renderização WebGL em hardware real ainda precisam dessa verificação.
+A bateria contém 57 testes, incluindo catálogo, busca combinada, categorias, compatibilidade dos mapas e limites geométricos dos 32 novos modelos. A geometria é verificada sem GPU; a conferência visual no navegador disponível usa o modo compatível porque ele não disponibiliza WebGL. O desempenho e o acabamento da renderização WebGL em hardware real ainda precisam dessa verificação.
 
 
 
@@ -166,3 +166,17 @@ A bateria contém 51 testes, incluindo catálogo, busca combinada, categorias, c
 Pinheiro, carvalho, bétula, árvore seca e salgueiro usam troncos curvos e afilados, raízes, ramificação secundária e materiais de casca com cor e relevo. As copas têm folhas recortadas com nervuras, variação de tom e lâminas dobradas; o pinheiro usa ramos de agulhas e o salgueiro tem ramos pendentes. Os cinco identificadores e o filtro Natureza → Árvores foram preservados, inclusive em mapas já salvos.
 
 Os modelos compartilham geometria e materiais entre cópias, com uma ou duas malhas por árvore. As miniaturas são geradas das mesmas geometrias e texturas por `npm run assets:previews`. Referências, limites e roteiro de validação: [docs/tree-models.md](docs/tree-models.md).
+
+## Tenda modelada por partes
+
+A tenda deixou de ser um bloco extrudado e passou a ser montada em cinco partes independentes em `src/scene/tentModel.ts`: `lona` (encostas com panos costurados, cumeeira, oitões, portinhola, rolo de lona e remendos), `estrutura` (cumeeira, pernas, prumos e sapatas), `cordas`, `estacas` e `interior` (pano de fundo, pano de chão, saco de dormir e mochila). As peças são fundidas por parte e acabamento no fim, o que mantém 14 chamadas de desenho e 3.336 triângulos para o modelo inteiro.
+
+Como a lona é uma superfície aberta, cada pano recebe um vetor `paraFora` e a malha é invertida quando nasce virada; sem isso metade dos ângulos mostrava o avesso escuro. Os encontros também foram refeitos com sobreposição (beiral 8 cm por fora da parede, oitão 8 cm abaixo do beiral, 3 cm de sobra nas pontas), porque encostar um pano de topo no outro abria frestas de 1 px.
+
+Para inspecionar o modelo em ângulos arbitrários sem navegador:
+
+```sh
+npm run modelo:previa -- tent 4 560
+```
+
+O comando grava `capturas/modelo-tent-1..4.png` e imprime triângulos, malhas, quebra por parte e limites. O rasterizador fica em `scripts/preview-raster.ts` e é o mesmo que gera as miniaturas da biblioteca, então o que aparece no arquivo é o que aparece na paleta. Os testes de `src/scene/tentModel.test.ts` cobrem orçamento de peças, peças internas contidas na lona, cobertura vista de fora em quatro direções, normais voltadas para fora, construção determinística e miniatura sem vazamento do interior.
