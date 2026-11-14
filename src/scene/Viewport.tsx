@@ -1,3 +1,4 @@
+import {CampfireLighting} from './campfire/CampfireModel';
 import {Component,useEffect,useMemo,useRef,useState,Suspense,type ReactNode,type RefObject} from 'react';
 import {Canvas,useFrame,useThree,type ThreeEvent} from '@react-three/fiber';
 import {Grid,OrbitControls,TransformControls} from '@react-three/drei';
@@ -173,7 +174,7 @@ function World(props:Props){
  <mesh receiveShadow position={[0,-.26,0]}><boxGeometry args={[s.size,.5,s.size]}/><meshStandardMaterial color={ambience.groundDeep} roughness={1}/></mesh>
  <mesh receiveShadow rotation={[-Math.PI/2,0,0]} position={[0,.002,0]} onPointerMove={e=>{if(placement){setPoint(floorPoint(e));setHover(true)}}} onPointerOut={()=>setHover(false)} onClick={e=>{e.stopPropagation();if(e.delta<5){if(placement)props.onPlace(floorPoint(e));else props.onSelect(null,false)}}}><planeGeometry args={[s.size,s.size]}/><meshStandardMaterial map={groundTexture??undefined} roughness={1}/></mesh>
  {s.grid&&<Grid args={[s.size,s.size]} position={[0,.01,0]} cellSize={s.gridSize} cellThickness={.5} cellColor={ambience.grid} sectionSize={s.gridSize*5} sectionThickness={1} sectionColor={ambience.gridSection} fadeDistance={100} fadeStrength={1} followCamera={false} infiniteGrid={false}/>}
- {project.objects.map(entity=><Placed key={entity.id} {...props} entity={entity}/>)}
+ <CampfireLighting enabled={project.objects.some(entity=>entity.kind==='campfire'&&entity.visible)}>{project.objects.map(entity=><Placed key={entity.id} {...props} entity={entity}/>)}</CampfireLighting>
  {guided&&neighbour&&<RulerLine from={guided.position} to={neighbour.entity.position}/>}
  {placement&&hover&&<group position={point}><mesh position={[0,.04,0]} rotation={[-Math.PI/2,0,0]}><ringGeometry args={[.7,.8,32]}/><meshBasicMaterial color="#e4f7b8" transparent opacity={.9}/></mesh><mesh position={[0,.02,0]} rotation={[-Math.PI/2,0,0]}><planeGeometry args={[1.5,1.5]}/><meshBasicMaterial color="#c0e4a4" transparent opacity={.25} depthWrite={false}/></mesh></group>}
  {selection.length>1&&props.tool!=='select'&&<GroupGizmo key={`${selection.join(',')}:${props.tool}`} entities={project.objects.filter(o=>selection.includes(o.id))} tool={props.tool} snap={s.snap} gridSize={s.gridSize} onChange={props.onGroupChange} onEnd={props.onGroupEnd}/>}
@@ -182,3 +183,4 @@ function World(props:Props){
 }
 function hasWebGL(){try{const canvas=document.createElement('canvas');const gl=canvas.getContext('webgl2');if(!gl)return false;gl.getExtension('WEBGL_lose_context')?.loseContext();return true}catch{return false}}
 export function Viewport(props:Props){const [available]=useState(hasWebGL);if(!available)return <CompatibleMap {...props}/>;return <SceneErrorBoundary><Canvas style={{position:'absolute',inset:0,width:'100%',height:'100%'}} shadows frameloop="demand" dpr={[1,1.5]} camera={{position:props.project.camera?.position??[23,20,27],fov:43,near:.1,far:300}} gl={{antialias:true,preserveDrawingBuffer:true}} onCreated={({gl})=>{gl.toneMapping=THREE.ACESFilmicToneMapping;gl.toneMappingExposure=1}}><Suspense fallback={null}><World {...props}/></Suspense></Canvas></SceneErrorBoundary>}
+
