@@ -11,6 +11,10 @@ O histórico do projeto está registrado como notas de [Obsidian](https://obsidi
 
 Hoje o cofre tem **33 notas de melhoria** e **5 de bug**. Os modelos para novas notas ficam em `Bugs e soluções/Bugs e soluçoes.md` e `Melhorias e Atualizações/Melhorias e Atualizações.md`. As notas usam frontmatter com tags (sem `#`) e `[[wikilinks]]` entre si.
 
+## Fogueira animada
+
+O asset de fogueira usa partículas procedurais, brasas e iluminação sincronizada, com até três luzes compartilhadas. Veja [configuração, fontes, API e ajustes](docs/campfire.md). O laboratório em `/examples/campfire/index.html` compara 1, 5 e 20 fogueiras e câmeras livre, superior e ortográfica. A medição de 60 FPS depende do hardware e permanece pendente.
+
 ## Executar
 
 Requisitos: Node.js 22 LTS e npm. Navegador desktop com WebGL 2 e aceleração gráfica para o editor 3D.

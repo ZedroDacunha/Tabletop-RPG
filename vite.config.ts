@@ -11,7 +11,7 @@ const base =
 export default defineConfig({
   base,
   plugins: [react()],
-  build: { chunkSizeWarningLimit: 1100 },
+  build: { chunkSizeWarningLimit: 1100, rollupOptions: {input: {app: 'index.html', campfire: 'examples/campfire/index.html'}} },
   server: {
     // Aceita a prévia remota (não apenas localhost) e recarrega a página
     // sempre que um arquivo em src/ muda.
@@ -26,3 +26,4 @@ export default defineConfig({
     allowedHosts: true,
   },
 });
+
